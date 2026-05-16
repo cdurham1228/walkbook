@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>1194 Walk Book</title>
+<style>
+  :root { --bg:#0a0a0a; --panel:#161616; --panel-2:#1f1f1f; --border:#2a2a2a; --text:#f5f5f5; --muted:#888; --green:#4ade80; --red:#f87171; --amber:#fbbf24; --accent:#60a5fa; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin:0; padding:0; background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",sans-serif; font-size:16px; line-height:1.3; -webkit-font-smoothing:antialiased; overscroll-behavior:none; }
+  .app { max-width:820px; margin:0 auto; padding:env(safe-area-inset-top, 12px) 14px 80px; }
+  header { padding:8px 0 14px; display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
+  .title { font-size:20px; font-weight:800; letter-spacing:-0.02em; }
+  .title small { color:var(--muted); font-weight:500; font-size:12px; margin-left:6px; }
+  .data-as-of { font-size:11px; color:var(--muted); text-align:right; }
+  .search-wrap { position:sticky; top:0; z-index:20; background:var(--bg); padding:4px 0 10px; }
+  .search { width:100%; padding:14px 16px; font-size:17px; background:var(--panel); color:var(--text); border:1.5px solid var(--border); border-radius:14px; outline:none; font-weight:500; }
+  .search:focus { border-color:var(--accent); }
+  .search::placeholder { color:#666; }
+  .results { display:none; margin-top:8px; background:var(--panel); border-radius:14px; overflow:hidden; }
+  .results.active { display:block; }
+  .result { padding:14px 16px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:baseline; gap:12px; }
+  .result:last-child { border-bottom:none; }
+  .result-label { font-size:14px; color:var(--muted); flex:1; min-width:0; }
+  .result-label strong { color:var(--text); display:block; font-size:16px; font-weight:600; margin-bottom:2px; }
+  .result-value { font-size:20px; font-weight:700; white-space:nowrap; font-variant-numeric:tabular-nums; }
+  .tiles { display:grid; grid-template-columns:repeat(2, 1fr); gap:10px; margin-top:4px; }
+  .tile { background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:16px 14px; cursor:pointer; transition:transform .08s, background .15s; text-align:left; }
+  .tile:active { transform:scale(0.97); background:var(--panel-2); }
+  .tile-icon { font-size:22px; margin-bottom:8px; }
+  .tile-name { font-size:15px; font-weight:700; letter-spacing:-0.01em; }
+  .tile-hint { font-size:12px; color:var(--muted); margin-top:4px; }
+  .panel-view { position:fixed; inset:0; background:var(--bg); transform:translateY(100%); transition:transform .25s ease; z-index:50; display:flex; flex-direction:column; padding-top:env(safe-area-inset-top, 12px); }
+  .panel-view.active { transform:translateY(0); }
+  .panel-header { display:flex; align-items:center; justify-content:space-between; padding:12px 14px; border-bottom:1px solid var(--border); }
+  .panel-title { font-size:18px; font-weight:700; }
+  .back-btn { background:var(--panel); border:none; color:var(--text); padding:8px 14px; border-radius:10px; font-size:15px; font-weight:600; }
+  .panel-body { overflow-y:auto; flex:1; padding:14px; -webkit-overflow-scrolling:touch; }
+  .section-label { font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin:16px 0 8px; padding:0 2px; }
+  .section-label:first-child { margin-top:0; }
+  .stat-card { background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:14px 16px; margin-bottom:8px; }
+  .stat-row { display:flex; justify-content:space-between; align-items:baseline; gap:12px; }
+  .stat-row + .stat-row { margin-top:10px; padding-top:10px; border-top:1px solid var(--border); }
+  .stat-name { font-size:14px; color:var(--muted); flex:1; }
+  .stat-name strong { display:block; color:var(--text); font-size:16px; font-weight:600; margin-bottom:2px; }
+  .stat-name span { font-size:11px; }
+  .stat-val { font-size:22px; font-weight:700; font-variant-numeric:tabular-nums; letter-spacing:-0.02em; }
+  .stat-val.big { font-size:28px; }
+  .stat-meta { font-size:12px; color:var(--muted); text-align:right; font-variant-numeric:tabular-nums; }
+  .delta-pos { color:var(--green); }
+  .delta-neg { color:var(--red); }
+  .delta-warn { color:var(--amber); }
+  .quad { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .quad-cell { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:12px; }
+  .quad-label { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.08em; font-weight:600; }
+  .quad-val { font-size:22px; font-weight:700; margin-top:4px; font-variant-numeric:tabular-nums; letter-spacing:-0.02em; }
+  .quad-sub { font-size:12px; margin-top:2px; font-variant-numeric:tabular-nums; }
+  .dept-row { display:grid; grid-template-columns:1fr auto auto; gap:10px; align-items:baseline; padding:10px 14px; background:var(--panel); border:1px solid var(--border); border-radius:10px; margin-bottom:6px; }
+  .dept-name { font-size:14px; font-weight:600; }
+  .dept-sales { font-size:15px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .dept-inc { font-size:13px; font-variant-numeric:tabular-nums; min-width:60px; text-align:right; }
+  .toggle-row { display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap; }
+  .toggle { flex:1; padding:9px 6px; background:var(--panel); border:1px solid var(--border); border-radius:10px; color:var(--muted); font-size:12px; font-weight:600; text-align:center; cursor:pointer; min-width:0; }
+  .toggle.active { background:var(--accent); color:#000; border-color:var(--accent); }
+  .week-strip { display:grid; grid-template-columns:repeat(7, 1fr); gap:4px; margin-bottom:8px; }
+  .day-cell { background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:8px 4px; text-align:center; }
+  .day-dow { font-size:10px; color:var(--muted); font-weight:700; text-transform:uppercase; }
+  .day-num { font-size:13px; font-weight:700; margin-top:4px; font-variant-numeric:tabular-nums; }
+  .day-actual { font-size:9px; color:var(--muted); margin-top:2px; }
+  .save-btn { width:100%; padding:14px; background:var(--green); color:#000; border:none; border-radius:12px; font-weight:700; font-size:16px; margin-top:12px; }
+  .note { font-size:12px; color:var(--muted); margin:8px 0; line-height:1.5; }
+  .empty { padding:20px; text-align:center; color:var(--muted); font-size:14px; }
+  .top-item { padding:8px 12px; background:var(--panel); border:1px solid var(--border); border-radius:8px; margin-bottom:4px; display:grid; grid-template-columns:auto 1fr auto; gap:10px; align-items:baseline; }
+  .rank { color:var(--muted); font-size:12px; font-weight:700; font-variant-numeric:tabular-nums; min-width:22px; }
+  .item-name { font-size:13px; font-weight:500; min-width:0; word-break:break-word; }
+  .item-sales { font-size:14px; font-weight:700; font-variant-numeric:tabular-nums; text-align:right; }
+  input[type=number] { width:100%; padding:10px; background:var(--panel-2); border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:16px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div><div class="title">1194 Perrysburg <small>Walk Book</small></div></div>
+    <div class="data-as-of" id="dataAsOf"></div>
+  </header>
+  <div class="search-wrap">
+    <input type="search" class="search" id="search" placeholder="Search — try 'wage', 'meat', 'last period'" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+    <div class="results" id="results"></div>
+  </div>
+  <div class="tiles">
+    <button class="tile" data-panel="sales"><div class="tile-icon">💰</div><div class="tile-name">Sales</div><div class="tile-hint">Yesterday · Running Wk · PTD · YTD</div></button>
+    <button class="tile" data-panel="lastweek"><div class="tile-icon">📅</div><div class="tile-name">Last Week</div><div class="tile-hint">Closed Mon–Sun (what VPs ask)</div></button>
+    <button class="tile" data-panel="lastperiod"><div class="tile-icon">📈</div><div class="tile-name">Last Period</div><div class="tile-hint">P9 closed — full P&L</div></button>
+    <button class="tile" data-panel="payroll"><div class="tile-icon">⏱️</div><div class="tile-name">Payroll</div><div class="tile-hint">Hours · Wage% · OT</div></button>
+    <button class="tile" data-panel="membership"><div class="tile-icon">🪪</div><div class="tile-name">Membership</div><div class="tile-hint">Signups · Exec · NMAR</div></button>
+    <button class="tile" data-panel="depts"><div class="tile-icon">🛒</div><div class="tile-name">Departments</div><div class="tile-hint">Sales by dept</div></button>
+    <button class="tile" data-panel="fresh"><div class="tile-icon">🥩</div><div class="tile-name">Fresh</div><div class="tile-hint">Meat·Bakery·Deli·Produce·FC</div></button>
+    <button class="tile" data-panel="shrink"><div class="tile-icon">📉</div><div class="tile-name">Shrink & D&D</div><div class="tile-hint">By category</div></button>
+    <button class="tile" data-panel="ancillary"><div class="tile-icon">⛽</div><div class="tile-name">Ancillary</div><div class="tile-hint">Gas · Pharm · Optical</div></button>
+  </div>
+</div>
+<div class="panel-view" id="panelView">
+  <div class="panel-header">
+    <button class="back-btn" id="backBtn">← Back</button>
+    <div class="panel-title" id="panelTitle"></div>
+    <div style="width:60px"></div>
+  </div>
+  <div class="panel-body" id="panelBody"></div>
+</div>
+<script>
+const DATA = {
+  asOfDashboard:"May 10", asOfParis:"May 16", asOfFinancial:"May 13 (P9)",
+  sales:{
+    daily:{ty:599094,inc:0.0687}, wtd:{ty:5024514,inc:0.1513}, ptd:{ty:20835360,inc:0.1505}, ytd:{ty:171220861,inc:0.0773},
+    merch:{daily:{ty:467407,inc:0.0158},wtd:{ty:3471863,inc:0.0518},ptd:{ty:14817121,inc:0.0713},ytd:{ty:130721076,inc:0.0675}},
+    gas:{daily:{ty:115284,inc:0.4662},wtd:{ty:1023711,inc:0.5472},ptd:{ty:3776218,inc:0.4849},ytd:{ty:22423079,inc:0.0749}},
+    traffic:{daily:{ty:3188,inc:-0.0307},wtd:{ty:24751,inc:0.0092},ptd:{ty:102554,inc:0.0207},ytd:{ty:918283,inc:0.0233}},
+    avgSales:{daily:{ty:167,inc:0.0507},wtd:{ty:179,inc:0.0934},ptd:{ty:182,inc:0.0896},ytd:{ty:174,inc:0.0628}}
+  },
+  lastWeek:{
+    label:"Mon 5/4 – Sun 5/10",
+    weekly:{
+      totalSales:{plan:4605705,actual:5024514,ly:4364251}, merchSales:{plan:3423507,actual:3471863,ly:3300963},
+      gasSales:{plan:726427,actual:1023711,ly:661645}, ancillary:{plan:515113,actual:528940,ly:401643},
+      hours:{schedule:6138.46,actual:5364.93,ly:5503.27}, dollars:{schedule:199500,actual:179138,ly:174274},
+      otHours:{schedule:0.50,actual:1.12,ly:0.13}, avgWage:{schedule:32.50,actual:33.39,ly:31.67},
+      pctMerch:{schedule:0.0583,actual:0.0516,ly:0.0528}, pctTotal:{schedule:0.0433,actual:0.0357,ly:0.0399}
+    },
+    days:[
+      {dow:"MON",date:"5/4",total:636203},{dow:"TUE",date:"5/5",total:662903},
+      {dow:"WED",date:"5/6",total:712298},{dow:"THU",date:"5/7",total:692151},
+      {dow:"FRI",date:"5/8",total:879536},{dow:"SAT",date:"5/9",total:842328},
+      {dow:"SUN",date:"5/10",total:599094}
+    ]
+  },
+  lastPeriod:{
+    label:"FY2026 P9 (closed)",
+    sales:{
+      warehouse:{ty:20621742,ly:17890311,budget:19254078,varBudgetPct:7.10,varLYPct:15.27},
+      merch:{ty:14816425,ly:13817401,budget:14744182,varBudgetPct:0.49,varLYPct:7.23},
+      gas:{ty:3776218,ly:2543108,budget:2662256,varBudgetPct:41.84,varLYPct:48.49},
+      anc:{ty:2284740,ly:1779724,budget:2092382,varBudgetPct:9.19,varLYPct:28.38}
+    },
+    margin:{merch:{ty:1929467,pct:13.02,varLY:12.12},grossProfit:{ty:2728392,pct:13.23,varLY:15.49}},
+    members:{total:{ty:473071,pct:2.29,varLY:4.37},regular:{ty:301910,pct:1.46,varLY:6.95},exec:{ty:171161,pct:0.83,varLY:0.11}},
+    expenses:{
+      salaries:{ty:742822,pct:3.60,varLY:6.52}, benefits:{ty:430837,pct:2.09,varLY:7.45},
+      workersComp:{ty:14856,pct:0.07,varLY:6.52}, totalControllables:{ty:1295625,pct:6.28,varLY:0.77},
+      totalNonControll:{ty:379250,pct:1.84,varLY:3.18}
+    },
+    profit:{
+      controllable:{ty:1432767,pct:6.95,varLY:33.08}, total:{ty:1053517,pct:5.11,varLY:48.57},
+      exGas:{ty:692122,pct:4.11,varLY:58.44}, exGasEcom:{ty:607096,pct:3.60,varLY:64.66}
+    }
+  },
+  payroll:{
+    merchSalesPlan:3856946, merchSalesActual:3752697, merchSalesVar:-104249, merchSalesIncLY:0.0529,
+    dollarsSchedule:198965, dollarsPlan:192000, dollarsActual:190017, dollarsVarPlan:-1983, dollarsToCut:3207,
+    pctPlan:0.0498, pctActual:0.0506, pctVarPlan:9, pctVarLY:-10,
+    hoursSchedule:5947, hoursPlan:5908, hoursActual:5656, hoursVarPlan:-251, hoursIncLY:-0.0263, hoursToCut:95,
+    otActual:0.90, otSNE:0, avgWage:33.59, productivity:663
+  },
+  membership:{
+    daily:{memberIncome:{ty:3900,inc:-0.2198},goldSignups:{ty:4,inc:-0.60},bizSignups:{ty:0,inc:-1},reactivations:{ty:0,inc:-1},total:{ty:4,inc:-0.6923},newMemberExecPct:{ty:0.75,inc:1.4375},execUpgrades:{ty:4,inc:-0.6667},triplePlay:{ty:0.25,inc:0},creditCardApps:{ty:3,inc:2},newMemberCCPct:{ty:0.50,inc:0},nmarPct:{ty:0.75,inc:0.3929},newMemberEmailPct:{ty:1,inc:0.1818}},
+    wtd:{memberIncome:{ty:55693,inc:0.0749},goldSignups:{ty:31,inc:-0.4833},bizSignups:{ty:1,inc:-0.6667},reactivations:{ty:7,inc:-0.4167},total:{ty:39,inc:-0.48},newMemberExecPct:{ty:0.6923,inc:0.6226},execUpgrades:{ty:40,inc:-0.2453},triplePlay:{ty:0.3333,inc:1.7778},creditCardApps:{ty:30,inc:0.1538},newMemberCCPct:{ty:0.3590,inc:1.2436},nmarPct:{ty:0.8462,inc:0.0404},newMemberEmailPct:{ty:0.9744,inc:0.015}},
+    ptd:{memberIncome:{ty:436905,inc:0.0398},goldSignups:{ty:135,inc:-0.4206},bizSignups:{ty:6,inc:0.20},reactivations:{ty:27,inc:-0.4706},total:{ty:168,inc:-0.4187},newMemberExecPct:{ty:0.744,inc:0.5143},execUpgrades:{ty:213,inc:-0.4635},triplePlay:{ty:0.3393,inc:0.9611},creditCardApps:{ty:185,inc:0.7130},newMemberCCPct:{ty:0.3631,inc:0.8738},nmarPct:{ty:0.9167,inc:0.0554},newMemberEmailPct:{ty:0.9821,inc:-0.0041}},
+    ytd:{memberIncome:{ty:4378418,inc:0.0552},goldSignups:{ty:2491,inc:-0.1713},bizSignups:{ty:51,inc:-0.1639},reactivations:{ty:372,inc:-0.272},total:{ty:2914,inc:-0.1856},newMemberExecPct:{ty:0.5491,inc:0.0184},execUpgrades:{ty:3234,inc:0.103},triplePlay:{ty:0.2111,inc:-0.0038},creditCardApps:{ty:1416,inc:-0.0484},newMemberCCPct:{ty:0.2272,inc:-0.0159},nmarPct:{ty:0.8679,inc:-0.0728},newMemberEmailPct:{ty:0.9839,inc:-0.0025}},
+    ftpt:{ft:151,ftPct:0.572,pt:104,ptPct:0.428,lpt:9}
+  },
+  departments:[
+    {code:"11",name:"TOBACCO",daily:36,wtd:491,ptd:2763,ytd:15732,wtdInc:0.240,ptdInc:0.630,ytdInc:0.064},
+    {code:"12",name:"CANDY",daily:35397,wtd:300647,ptd:1326329,ytd:12596376,wtdInc:0.066,ptdInc:0.099,ytdInc:0.089},
+    {code:"13",name:"FOOD",daily:37136,wtd:323457,ptd:1410509,ytd:13943708,wtdInc:0.048,ptdInc:0.077,ytdInc:0.122},
+    {code:"14",name:"SUNDRIES",daily:62962,wtd:503985,ptd:2255482,ytd:20979814,wtdInc:0.040,ptdInc:0.036,ytdInc:0.044},
+    {code:"16",name:"LIQUOR",daily:8989,wtd:70944,ptd:278751,ytd:2477224,wtdInc:-0.034,ptdInc:-0.067,ytdInc:-0.030},
+    {code:"17",name:"COOLER",daily:21466,wtd:167858,ptd:742903,ytd:6771547,wtdInc:-0.019,ptdInc:-0.038,ytdInc:0.012},
+    {code:"18",name:"FROZEN",daily:25168,wtd:199224,ptd:888943,ytd:7986506,wtdInc:0.054,ptdInc:0.080,ytdInc:0.043},
+    {code:"19",name:"DELI",daily:20768,wtd:155972,ptd:684820,ytd:6513166,wtdInc:0.080,ptdInc:0.020,ytdInc:0.050},
+    {code:"20",name:"HABA",daily:24463,wtd:168441,ptd:871919,ytd:7672685,wtdInc:0.105,ptdInc:0.156,ytdInc:0.068},
+    {code:"22",name:"TIRES",daily:8079,wtd:52796,ptd:180217,ytd:1639612,wtdInc:0.314,ptdInc:0.151,ytdInc:0.119},
+    {code:"23",name:"HARDWARE",daily:10202,wtd:77117,ptd:291973,ytd:2703848,wtdInc:0.340,ptdInc:0.155,ytdInc:-0.008},
+    {code:"24",name:"MAJORS",daily:11107,wtd:165394,ptd:569855,ytd:5818836,wtdInc:0.361,ptdInc:0.283,ytdInc:0.265},
+    {code:"25",name:"AUTO",daily:1518,wtd:9055,ptd:53860,ytd:429522,wtdInc:-0.276,ptdInc:-0.053,ytdInc:-0.191},
+    {code:"26",name:"SPORTS",daily:7476,wtd:42937,ptd:193635,ytd:1178149,wtdInc:-0.185,ptdInc:-0.169,ytdInc:-0.167},
+    {code:"27",name:"GARDEN",daily:48621,wtd:247164,ptd:909600,ytd:2649826,wtdInc:-0.195,ptdInc:-0.085,ytdInc:0.028},
+    {code:"28",name:"TOYS/SEAS",daily:2403,wtd:12862,ptd:49127,ytd:835460,wtdInc:-0.169,ptdInc:-0.078,ytdInc:-0.249},
+    {code:"31",name:"W APPAREL",daily:8157,wtd:59704,ptd:245889,ytd:2474869,wtdInc:0.020,ptdInc:-0.007,ytdInc:-0.012},
+    {code:"32",name:"HOUSEWRS",daily:4089,wtd:20070,ptd:85851,ytd:781693,wtdInc:0.103,ptdInc:0.118,ytdInc:-0.257},
+    {code:"33",name:"SM APPL",daily:19265,wtd:113100,ptd:422799,ytd:3449271,wtdInc:0.465,ptdInc:0.224,ytdInc:-0.041},
+    {code:"34",name:"DOMESTICS",daily:4849,wtd:26626,ptd:119848,ytd:1306544,wtdInc:-0.113,ptdInc:-0.085,ytdInc:-0.074},
+    {code:"35",name:"JEWELRY",daily:1930,wtd:46040,ptd:327738,ytd:1943492,wtdInc:-0.039,ptdInc:1.102,ytdInc:0.015},
+    {code:"36",name:"MEDIA",daily:937,wtd:1089,ptd:7141,ytd:290394,wtdInc:0.005,ptdInc:0.149,ytdInc:0.110},
+    {code:"38",name:"HOME FURN",daily:3362,wtd:8434,ptd:64177,ytd:998017,wtdInc:-0.095,ptdInc:-0.013,ytdInc:-0.121},
+    {code:"39",name:"M APPAREL",daily:9538,wtd:65290,ptd:287139,ytd:3122079,wtdInc:0.080,ptdInc:0.022,ytdInc:0.042},
+    {code:"44",name:"SPCL EVNT",daily:2015,wtd:11223,ptd:49736,ytd:680686,wtdInc:0.440,ptdInc:1.673,ytdInc:0.642},
+    {code:"61",name:"MEAT",daily:40328,wtd:259740,ptd:997479,ytd:8507470,wtdInc:0.098,ptdInc:0.136,ytdInc:0.147},
+    {code:"62",name:"BAKERY",daily:11717,wtd:85413,ptd:292442,ytd:2540046,wtdInc:0.131,ptdInc:0.028,ytdInc:0.151},
+    {code:"63",name:"SERV DELI",daily:12503,wtd:89921,ptd:377598,ytd:3479548,wtdInc:0.121,ptdInc:0.144,ytdInc:0.057},
+    {code:"65",name:"PRODUCE",daily:22770,wtd:169295,ptd:709563,ytd:5702460,wtdInc:0.065,ptdInc:0.050,ytdInc:0.073},
+    {code:"53",name:"GASOLINE",daily:115284,wtd:1023711,ptd:3776218,ytd:22423079,wtdInc:0.547,ptdInc:0.485,ytdInc:0.075},
+    {code:"88",name:"FOOD CT",daily:3900,wtd:34924,ptd:146817,ytd:1308201,wtdInc:0.127,ptdInc:0.134,ytdInc:0.151},
+    {code:"92",name:"PHARM RX",daily:0,wtd:304047,ptd:1261226,ytd:9422428,wtdInc:0.484,ptdInc:0.520,ytdInc:0.255},
+    {code:"93",name:"PHARM OTC",daily:10593,wtd:94252,ptd:468836,ytd:4350511,wtdInc:0.017,ptdInc:0.019,ytdInc:0.037},
+    {code:"94",name:"OPTICAL",daily:1902,wtd:64770,ptd:239096,ytd:2138566,wtdInc:0.213,ptdInc:0.029,ytdInc:0.108},
+    {code:"96",name:"HEAR AIDS",daily:8,wtd:30946,ptd:126045,ytd:857232,wtdInc:0.576,ptdInc:0.487,ytdInc:0.022}
+  ],
+  fresh:{
+    meat:{
+      sales:{ty:997479,ly:878313,budget:949209,varLY:13.57,varBudget:5.09}, ytdSales:{ty:8507470,ly:7414138,varLY:14.75},
+      flow:{ty:123501,pct:12.38}, margin:{ty:110234,pct:11.05,varLY:21.62}, payroll:{ty:-59004,pct:-5.92},
+      shrink:{ty:6772,pct:0.68}, reprocess:{ty:-32403,pct:-3.25}, dd:{ty:-9065,pct:-0.91},
+      netMargin:{ty:51229,pct:5.14,varLY:74.32},
+      topItems:[
+        {rank:1,name:"33724 GROUND BEEF",units:4446,sales:116312},
+        {rank:2,name:"33605 BEEF LOIN TENDERLOIN",units:694,sales:113827},
+        {rank:3,name:"1933764 RASTELLI'S GRASS-FED",units:506,sales:12493},
+        {rank:4,name:"33593 BEEF LOIN NEW YORK STEAK",units:764,sales:11941},
+        {rank:5,name:"47735 CONV B/S BREAST",units:3401,sales:10170},
+        {rank:6,name:"44478 BEEF RIBEYE STEAK THIN",units:823,sales:9112},
+        {rank:7,name:"34344 USDA PRIME BEEF LIP-ON",units:131,sales:1834},
+        {rank:8,name:"27201 FRESH STEELHEAD FILLET",units:185,sales:1662},
+        {rank:9,name:"33965 PORK LOIN BACKRIBS",units:735,sales:2566},
+        {rank:10,name:"33977 BEEF FLANK STEAK",units:192,sales:2500}
+      ]
+    },
+    bakery:{
+      sales:{ty:292442,ly:284371,budget:295155,varLY:2.84,varBudget:-0.92}, ytdSales:{ty:2540046,ly:2206906,varLY:15.10},
+      flow:{ty:142891,pct:48.86}, margin:{ty:130730,pct:44.70,varLY:3.66}, payroll:{ty:-118425,pct:-40.50},
+      shrink:{ty:-3826,pct:-1.31}, dd:{ty:-8291,pct:-2.84}, netMargin:{ty:12305,pct:4.21,varLY:-56.80},
+      topItems:[
+        {rank:1,name:"40706 TUXEDO CHOCOLATE MOUSSE",units:298,sales:5659},
+        {rank:2,name:"115040 HAND DIPPED STRAWBERRIES",units:301,sales:6740},
+        {rank:3,name:"1991766 BLUEBERRIES + CREAM",units:497,sales:4574},
+        {rank:4,name:"1970741 BLUEBERRY CHEESECAKE",units:256,sales:3525},
+        {rank:5,name:"37220 CHEESECAKE",units:149,sales:2979},
+        {rank:6,name:"1199652 PEACHES AND CREAM",units:160,sales:2878},
+        {rank:7,name:"1943729 STRAWBERRY CREAM PIE",units:131,sales:2488},
+        {rank:8,name:"1719747 LEMON BLUEBERRY LOAF",units:260,sales:2337},
+        {rank:9,name:"1717129 PEACH MUFFIN",units:194,sales:2139},
+        {rank:10,name:"1331228 MIXED BERRY MUFFIN",units:226,sales:2086}
+      ]
+    },
+    deli:{
+      sales:{ty:377598,ly:330055,budget:384778,varLY:14.40,varBudget:-1.87}, ytdSales:{ty:3479548,ly:3292668,varLY:5.68},
+      flow:{ty:129181,pct:34.21}, margin:{ty:119158,pct:31.56,varLY:11.27}, payroll:{ty:-101086,pct:-26.77},
+      shrink:{ty:-10849,pct:-2.87}, dd:{ty:-3315,pct:-0.88}, netMargin:{ty:18072,pct:4.79,varLY:45.50},
+      topItems:[
+        {rank:1,name:"41752 ROTISSERIE CHICKEN",units:2236,sales:11158},
+        {rank:2,name:"1446716 GRILLED CHIPOTLE SEASONED",units:644,sales:7722},
+        {rank:3,name:"32051 SHRIMP COCKTAIL",units:453,sales:4982},
+        {rank:4,name:"42940 STUFFED BELL PEPPERS",units:928,sales:4629},
+        {rank:5,name:"1545 CHICKEN STREET TACO KIT",units:744,sales:4087},
+        {rank:6,name:"40506 MAC AND CHEESE",units:1004,sales:4004},
+        {rank:7,name:"30783 MEATLOAF WITH MASHED",units:823,sales:3940},
+        {rank:8,name:"40249 CHICKEN ALFREDO",units:771,sales:3464},
+        {rank:9,name:"16318 BEEF + BROCCOLI",units:453,sales:3165},
+        {rank:10,name:"27130 GYRO KIT",units:385,sales:2691}
+      ]
+    },
+    produce:{
+      sales:{ty:709563,ly:675457,budget:693013,varLY:5.05,varBudget:2.39}, ytdSales:{ty:5702460,ly:5312315,varLY:7.34},
+      flow:{ty:126821,pct:17.87}, margin:{ty:98134,pct:13.83,varLY:-2.81}, payroll:{ty:0,pct:0},
+      shrink:{ty:-34,pct:0}, dd:{ty:-26725,pct:-3.77}, netMargin:{ty:98134,pct:13.83,varLY:-2.81},
+      topItems:[
+        {rank:1,name:"27003 STRAWBERRIES",units:2482,sales:9555},
+        {rank:2,name:"57554 BLUEBERRIES",units:1260,sales:9529},
+        {rank:3,name:"47825 SEEDLESS GREEN GRAPES",units:651,sales:5136},
+        {rank:4,name:"519638 ORGANIC BLUEBERRIES",units:453,sales:4970},
+        {rank:5,name:"647465 AVOCADOS",units:943,sales:4706},
+        {rank:6,name:"4032 SEEDLESS WATERMELON",units:652,sales:4670},
+        {rank:7,name:"56366 RASPBERRIES",units:1157,sales:4516},
+        {rank:8,name:"7950 4LB COSMIC CRISP APPLES",units:570,sales:3870},
+        {rank:9,name:"702669 BLACKBERRIES",units:977,sales:3770},
+        {rank:10,name:"5276 SEEDLESS RED GRAPES",units:542,sales:3734}
+      ]
+    },
+    foodCourt:{
+      sales:{ty:146817,ly:129466,budget:137450,varLY:13.40,varBudget:6.81}, ytdSales:{ty:1308201,ly:1136747,varLY:15.08},
+      grossMargin:{ty:66037,pct:44.98,varLY:10.87}, payroll:{ty:-41379,pct:-28.18}, benefits:{ty:-24000,pct:-16.35},
+      profit:{ty:-4369,pct:-2.98,varLY:21.97}, ytdProfit:{ty:-14324,pct:-1.09,varLY:-77.05},
+      topItems:[
+        {rank:1,name:"1184862 KIOSK WHOLE PEP. PIZZA",units:583,sales:5801},
+        {rank:2,name:"1935328 KIOSK HOTDOG/SODA COMBO",units:2177,sales:3266},
+        {rank:3,name:"1184748 KIOSK SLICE PEP. PIZZA",units:1621,sales:3226},
+        {rank:4,name:"1184753 KIOSK CHICKEN BAKE",units:759,sales:3028},
+        {rank:5,name:"1184887 KIOSK WHOLE CHEESE PIZZA",units:297,sales:2955},
+        {rank:6,name:"1214898 KIOSK WHOLE CHEESE/PEPP.",units:210,sales:2090},
+        {rank:7,name:"1184757 KIOSK SLICE CHEESE PIZZA",units:940,sales:1871},
+        {rank:8,name:"1794127 KIOSK CHOC CHIP COOKIE",units:729,sales:1815},
+        {rank:9,name:"1902754 KIOSK STRAW BANA SMOOTHIE",units:566,sales:1692},
+        {rank:10,name:"1935245 KIOSK 20OZ SODA",units:1656,sales:1308}
+      ]
+    },
+    total:{
+      sales:{ty:2377082,ly:2168195,budget:2322156,varLY:9.63,varBudget:2.37},
+      ytdSales:{ty:20229524,ly:18226028,varLY:10.99},
+      margin:{ty:458255,pct:19.28,varLY:7.87}, payroll:{ty:-278516,pct:-11.72},
+      netMargin:{ty:179740,pct:7.56,varLY:4.95}
+    }
+  },
+  shrink:[
+    {name:"Food & Sundries",ddYtd:156,ddPctYtd:0.0022},
+    {name:"Hardlines",ddYtd:348,ddPctYtd:0.0148},
+    {name:"Softlines",ddYtd:184,ddPctYtd:0.0117},
+    {name:"Produce",ddYtd:275,ddPctYtd:0.0483},
+    {name:"Pharmacy OTC",ddYtd:12,ddPctYtd:0.0027},
+    {name:"Optical",ddYtd:11,ddPctYtd:0.0053},
+    {name:"Total",ddYtd:987,ddPctYtd:0.0080}
+  ],
+  shrinkDetail:[
+    {name:"Tires",ytd:101,ytdPct:0.0614},
+    {name:"Home Furn",ytd:42,ytdPct:0.0421},
+    {name:"Majors",ytd:146,ytdPct:0.0252},
+    {name:"Sports",ytd:26,ytdPct:0.0221},
+    {name:"W Apparel",ytd:55,ytdPct:0.0220},
+    {name:"Toys/Seas",ytd:15,ytdPct:0.0185},
+    {name:"M Apparel",ytd:55,ytdPct:0.0177},
+    {name:"Domestics",ytd:22,ytdPct:0.0166},
+    {name:"Garden",ytd:27,ytdPct:0.0103},
+    {name:"Hardware",ytd:9,ytdPct:0.0033},
+    {name:"HABA",ytd:22,ytdPct:0.0029}
+  ],
+  ancillary:{
+    foodService:{sales:146817,profit:-4369,profitPct:-2.98,ytdSales:1308201,ytdProfit:-14324},
+    optical:{sales:239096,profit:44776,profitPct:18.73,ytdSales:2138566,ytdProfit:360604},
+    hearing:{sales:126045,profit:17732,profitPct:14.07,ytdSales:857232,ytdProfit:28320},
+    pharmRx:{sales:1303932,profit:-80640,profitPct:-6.18,ytdSales:9806454,ytdProfit:-531693},
+    pharmOtc:{sales:468851,profit:94627,profitPct:20.18,ytdSales:4350511,ytdProfit:915343},
+    gasoline:{sales:3776218,profit:361394,profitPct:9.57,ytdSales:22423079,ytdProfit:2474659}
+  }
+};
+
+const fmt$ = n => { if(n==null||isNaN(n))return "—"; const a=Math.abs(n),s=n<0?"-":""; if(a>=1e6)return s+"$"+(a/1e6).toFixed(2)+"M"; if(a>=1e3)return s+"$"+(a/1e3).toFixed(1)+"K"; return s+"$"+Math.round(a).toLocaleString(); };
+const fmt$full = n => { if(n==null||isNaN(n))return "—"; return (n<0?"-":"")+"$"+Math.abs(Math.round(n)).toLocaleString(); };
+const fmtN = (n,dec=0) => { if(n==null||isNaN(n))return "—"; return Number(n).toLocaleString(undefined,{minimumFractionDigits:dec,maximumFractionDigits:dec}); };
+const fmtPct = (n,dec=1) => { if(n==null||isNaN(n))return "—"; return (n*100).toFixed(dec)+"%"; };
+const fmtPctRaw = (n,dec=1) => { if(n==null||isNaN(n))return "—"; return Number(n).toFixed(dec)+"%"; };
+const deltaClass = (n,inv=false) => { if(n===0||n==null)return ""; return (inv?n<0:n>0)?"delta-pos":"delta-neg"; };
+const arrow = n => n>0?"▲":n<0?"▼":"·";
+
+function panelTitle(p) {
+  return ({sales:"Sales",lastweek:"Last Week",lastperiod:"Last Period (P9)",payroll:"Payroll",membership:"Membership",depts:"Departments",fresh:"Fresh",shrink:"Shrink & D&D",ancillary:"Ancillary"})[p]||"";
+}
+
+function renderPanel(name) {
+  document.getElementById("panelTitle").textContent = panelTitle(name);
+  document.getElementById("panelBody").innerHTML = panelHTML[name]();
+  document.getElementById("panelBody").scrollTop = 0;
+}
+
+const panelHTML = {
+  sales: () => {
+    const s = DATA.sales;
+    const quad = (obj,label) => `<div class="section-label">${label}</div><div class="quad">${["daily","wtd","ptd","ytd"].map(k=>`<div class="quad-cell"><div class="quad-label">${k==="daily"?"Yesterday":k==="wtd"?"Running Wk":k.toUpperCase()}</div><div class="quad-val">${fmt$(obj[k].ty)}</div><div class="quad-sub ${deltaClass(obj[k].inc)}">${arrow(obj[k].inc)} ${fmtPct(obj[k].inc)}</div></div>`).join("")}</div>`;
+    return quad({daily:s.daily,wtd:s.wtd,ptd:s.ptd,ytd:s.ytd},"Total Sales") + quad(s.merch,"Merch Sales") + quad(s.gas,"Gas Sales") + `
+      <div class="section-label">Traffic & Avg Sale</div>
+      <div class="stat-card">
+        <div class="stat-row"><div class="stat-name"><strong>Traffic Daily</strong></div><div class="stat-val">${fmtN(s.traffic.daily.ty)}</div><div class="stat-meta ${deltaClass(s.traffic.daily.inc)}">${fmtPct(s.traffic.daily.inc)}</div></div>
+        <div class="stat-row"><div class="stat-name"><strong>Traffic YTD</strong></div><div class="stat-val">${fmtN(s.traffic.ytd.ty)}</div><div class="stat-meta ${deltaClass(s.traffic.ytd.inc)}">${fmtPct(s.traffic.ytd.inc)}</div></div>
+        <div class="stat-row"><div class="stat-name"><strong>Avg Sale Daily</strong></div><div class="stat-val">$${s.avgSales.daily.ty}</div><div class="stat-meta ${deltaClass(s.avgSales.daily.inc)}">${fmtPct(s.avgSales.daily.inc)}</div></div>
+        <div class="stat-row"><div class="stat-name"><strong>Avg Sale YTD</strong></div><div class="stat-val">$${s.avgSales.ytd.ty}</div><div class="stat-meta ${deltaClass(s.avgSales.ytd.inc)}">${fmtPct(s.avgSales.ytd.inc)}</div></div>
+      </div>`;
+  },
+
+  lastweek: () => {
+    const w = DATA.lastWeek, wk = w.weekly;
+    const vs = (a,b) => { const d=a-b,p=b!==0?d/b:0; return `<span class="${deltaClass(d)}">${arrow(d)} ${fmtPct(p)}</span>`; };
+    return `
+      <div class="section-label">${w.label}</div>
+      <div class="stat-card">
+        <div class="stat-row"><div class="stat-name"><strong>Total Sales</strong><span>Plan ${fmt$(wk.totalSales.plan)} · LY ${fmt$(wk.totalSales.ly)}</span></div><div><div class="stat-val big">${fmt$(wk.totalSales.actual)}</div><div class="stat-meta">vs Plan ${vs(wk.totalSales.actual,wk.totalSales.plan)}</div><div class="stat-meta">vs LY ${vs(wk.totalSales.actual,wk.totalSales.ly)}</div></div></div>
+        <div class="stat-row"><div class="stat-name"><strong>Merch</strong></div><div><div class="stat-val">${fmt$(wk.merchSales.actual)}</div><div class="stat-meta">vs Plan ${vs(wk.merchSales.actual,wk.merchSales.plan)}</div></div></div>
+        <div class="stat-row"><div class="stat-name"><strong>Gas</strong></div><div><div class="stat-val">${fmt$(wk.gasSales.actual)}</div><div class="stat-meta">vs Plan ${vs(wk.gasSales.actual,wk.gasSales.plan)}</div></div></div>
+        <div class="stat-row"><div class="stat-name"><strong>Ancillary</strong></div><div><div class="stat-val">${fmt$(wk.ancillary.actual)}</div><div class="stat-meta">vs Plan ${vs(wk.ancillary.actual,wk.ancillary.plan)}</div></div></div>
+      </div>
+      <div class="section-label">Daily Breakdown</div>
+      <div class="week-strip">${w.days.map(d=>`<div class="day-cell"><div class="day-dow">${d.dow}</div><div class="day-num">${fmt$(d.total)}</div><div class="day-actual">${d.date}</div></div>`).join("")}</div>
+      <div class="section-label">Payroll Last Week</div>
+      <div class="stat-card">
+        <div class="stat-row"><div class="stat-name"><strong>Hours</strong><span>Sch ${fmtN(wk.hours.schedule,0)} · LY ${fmtN(wk.hours.ly,0)}</span></div><div><div class="stat-val">${fmtN(wk.hours.actual,0)}</div><div class="stat-meta">vs Sch ${vs(wk.hours.actual,wk.hours.schedule)}</div></div></div>
+        <div class="stat-row"><div class="stat-name"><strong>Avg Wage</strong></div><div><div class="stat-val">$${wk.avgWage.actual.toFixed(2)}</div><div class="stat-meta">LY $${wk.avgWage.ly.toFixed(2)}</div></div></div>
+        <div class="stat-row"><div class="stat-name"><strong>OT Hours</strong></div><div><div class="stat-val">${wk.otHours.actual.toFixed(2)}</div><div class="stat-meta">LY ${wk.otHours.ly.toFixed(2)}</div></div></div>
+        <div class="stat-row"><div class="stat-name"><strong>Payroll % Merch</strong></div><div><div class="stat-val">${fmtPct(wk.pctMerch.actual,2)}</div><div class="stat-meta">Sch ${fmtPct(wk.pctMerch.schedule,2)} · LY ${fmtPct(wk.pctMerch.ly,2)}</div></div></div>
+        <div class="stat-row"><div class="stat-name"><strong>Payroll % Total</strong></div><div><div class="stat-val">${fmtPct(wk.pctTotal.actual,2)}</div><div class="stat-meta">Sch ${fmtPct(wk.pctTotal.schedule,2)} · LY ${fmtPct(wk.pctTotal.ly,2)}</div></div></div>
+      </div>`;
+  },
+
+  lastperiod: () => {
+    const lp = DATA.lastPeriod;
+    const row = (label,obj,big) => `<div class="stat-row"><div class="stat-name"><strong>${label}</strong>${obj.pct!==undefined?`<span>${fmtPctRaw(obj.pct,2)} of sales</span>`:''}</div><div><div class="stat-val ${big?'big':''}">${fmt$(obj.ty)}</div>${obj.varLY!==undefined?`<div class="stat-meta ${deltaClass(obj.varLY)}">${arrow(obj.varLY)} ${fmtPctRaw(obj.varLY,2)} vs LY</div>`:''}</div></div>`;
+    const salesRow = (label,obj) => `<div class="stat-row"><div class="stat-name"><strong>${label}</strong><span>Bud ${fmt$(obj.budget)} · LY ${fmt$(obj.ly)}</span></div><div><div class="stat-val">${fmt$(obj.ty)}</div><div class="stat-meta ${deltaClass(obj.varBudgetPct)}">${arrow(obj.varBudgetPct)} ${fmtPctRaw(obj.varBudgetPct,2)} vs Bud</div><div class="stat-meta ${deltaClass(obj.varLYPct)}">${arrow(obj.varLYPct)} ${fmtPctRaw(obj.varLYPct,2)} vs LY</div></div></div>`;
+    return `
+      <div class="section-label">${lp.label}</div>
+      <div class="stat-card">${row("Profit",lp.profit.total,true)}${row("Profit ex Gas",lp.profit.exGas)}${row("Profit ex Gas & Ecomm",lp.profit.exGasEcom)}${row("Controllable Profit",lp.profit.controllable)}</div>
+      <div class="section-label">Sales</div>
+      <div class="stat-card">${salesRow("Warehouse Sales",lp.sales.warehouse)}${salesRow("Merch Sales",lp.sales.merch)}${salesRow("Gas Sales",lp.sales.gas)}${salesRow("Ancillary (ex Gas)",lp.sales.anc)}</div>
+      <div class="section-label">Margin</div>
+      <div class="stat-card">${row("Gross Profit",lp.margin.grossProfit)}${row("Merch Margin",lp.margin.merch)}</div>
+      <div class="section-label">Membership</div>
+      <div class="stat-card">${row("Total Membership",lp.members.total)}${row("Regular",lp.members.regular)}${row("Executive",lp.members.exec)}</div>
+      <div class="section-label">Controllables</div>
+      <div class="stat-card">${row("Salaries",lp.expenses.salaries)}${row("Benefits",lp.expenses.benefits)}${row("Workers Comp",lp.expenses.workersComp)}${row("Total Controllables",lp.expenses.totalControllables)}${row("Total Non-Controllables",lp.expenses.totalNonControll)}</div>`;
+  },
+
+  payroll: () => {
+    const p = DATA.payroll;
+    return `
+      <div class="section-label">PARIS — Current Week (WTD)</div>
+      <div class="stat-card">
+        <div class="stat-row"><div class="stat-name"><strong>Merch Payroll %</strong><span>Plan ${fmtPctRaw(p.pctPlan*100,2)}</span></div><div><div class="stat-val big">${fmtPctRaw(p.pctActual*100,2)}</div><div class="stat-meta ${p.pctVarPlan>0?'delta-neg':'delta-pos'}">${p.pctVarPlan>0?'+':''}${p.pctVarPlan} bps vs Plan</div><div class="stat-meta ${p.pctVarLY>0?'delta-neg':'delta-pos'}">${p.pctVarLY>0?'+':''}${p.pctVarLY} bps vs LY</div></div></div>
+      </div>
+      <div class="section-label">Hours</div>
+      <div class="stat-card">
+        <div class="stat-row"><div class="stat-name"><strong>Actual Hours</strong><span>Sch ${fmtN(p.hoursSchedule)} · Plan ${fmtN(p.hoursPlan)}</span></div><div><div class="stat-val">${fmtN(p.hoursActual)}</div><div class="stat-meta ${p.hoursVarPlan<0?'delta-pos':'delta-neg'}">${p.hoursVarPlan>0?'+':''}${fmtN(p.hoursVarPlan)} vs Plan</div><div class="stat-meta ${p.hoursIncLY<0?'delta-pos':'delta-neg'}">${fmtPct(p.hoursIncLY)} vs LY</div></div></div>
+        <div class="stat-row"><div class="stat-name"><strong>OT Hours (ex Sun & SNE)</strong></div><div><div class="stat-val">${p.otActual.toFixed(2)}</div><div class="stat-meta">SNE ${p.otSNE.toFixed(2)}</div></div></div>
+        <div class="stat-row"><div class="stat-name"><strong>Hours to Cut</strong><span>to hit merch pay%</span></div><div><div class="stat-val ${p.hoursToCut>0?'delta-warn':'delta-pos'}">${p.hoursToCut>0?fmtN(p.hoursToCut):'0'}</div></div></div>
+      </div>
+      <div class="section-label">Dollars</div>
+      <div class="stat-card">
+        <div class="stat-row"><div class="stat-name"><strong>Actual $</strong><span>Sch ${fmt$(p.dollarsSchedule)} · Plan ${fmt$(p.dollarsPlan)}</span></div><div><div class="stat-val">${fmt$(p.dollarsActual)}</div><div class="stat-meta ${p.dollarsVarPlan<0?'delta-pos':'delta-neg'}">${p.dollarsVarPlan>0?'+':''}${fmt$(p.dollarsVarPlan)} vs Plan</div></div></div>
+        <div class="stat-row"><div class="stat-name"><strong>$ to Cut</strong><span>to hit merch pay%</span></div><div><div class="stat-val ${p.dollarsToCut>0?'delta-warn':'delta-pos'}">${p.dollarsToCut>0?fmt$(p.dollarsToCut):'$0'}</div></div></div>
+        <div class="stat-row"><div class="stat-name"><strong>Avg Wage</strong></div><div><div class="stat-val">$${p.avgWage.toFixed(2)}</div></div></div>
+        <div class="stat-row"><div class="stat-name"><strong>Productivity</strong><span>sales per hour</span></div><div><div class="stat-val">$${p.productivity}</div></div></div>
+      </div>
+      <div class="section-label">Staff Mix</div>
+      <div class="stat-card">
+        <div class="stat-row"><div class="stat-name"><strong>Full Time</strong></div><div><div class="stat-val">${DATA.membership.ftpt.ft}</div><div class="stat-meta">${fmtPct(DATA.membership.ftpt.ftPct)}</div></div></div>
+        <div class="stat-row"><div class="stat-name"><strong>Part Time</strong></div><div><div class="stat-val">${DATA.membership.ftpt.pt}</div><div class="stat-meta">${fmtPct(DATA.membership.ftpt.ptPct)}</div></div></div>
+        <div class="stat-row"><div class="stat-name"><strong>Limited Part Time</strong></div><div><div class="stat-val">${DATA.membership.ftpt.lpt}</div></div></div>
+      </div>`;
+  },
+
+  membership: () => `<div class="toggle-row" id="memToggle"><div class="toggle" data-period="daily">Yesterday</div><div class="toggle" data-period="wtd">Running Wk</div><div class="toggle active" data-period="ptd">PTD</div><div class="toggle" data-period="ytd">YTD</div></div><div id="memContent">${membershipPeriod("ptd")}</div>`,
+
+  depts: () => `<div class="toggle-row" id="deptToggle"><div class="toggle" data-period="daily">Yesterday</div><div class="toggle" data-period="wtd">Running Wk</div><div class="toggle active" data-period="ptd">PTD</div><div class="toggle" data-period="ytd">YTD</div></div><div id="deptList">${deptList("ptd")}</div>`,
+
+  fresh: () => `<div class="toggle-row" id="freshToggle"><div class="toggle active" data-cat="overview">All</div><div class="toggle" data-cat="meat">Meat</div><div class="toggle" data-cat="bakery">Bakery</div><div class="toggle" data-cat="deli">Deli</div><div class="toggle" data-cat="produce">Produce</div><div class="toggle" data-cat="foodCourt">Food Ct</div></div><div id="freshContent">${freshContent("overview")}</div>`,
+
+  shrink: () => {
+    const s = DATA.shrink, d = [...DATA.shrinkDetail].sort((a,b)=>b.ytdPct-a.ytdPct);
+    return `<div class="section-label">D&D YTD by Category</div>${s.map(r=>`<div class="dept-row"><div class="dept-name">${r.name}</div><div class="dept-sales">${fmt$(r.ddYtd*1000)}</div><div class="dept-inc ${r.ddPctYtd>0.02?'delta-neg':''}">${fmtPctRaw(r.ddPctYtd*100,2)}</div></div>`).join("")}<div class="section-label">Top D&D % by Dept (YTD)</div>${d.map(r=>`<div class="dept-row"><div class="dept-name">${r.name}</div><div class="dept-sales">${fmt$(r.ytd*1000)}</div><div class="dept-inc ${r.ytdPct>0.02?'delta-neg':''}">${fmtPctRaw(r.ytdPct*100,2)}</div></div>`).join("")}`;
+  },
+
+  ancillary: () => {
+    const a = DATA.ancillary;
+    const card = (label,obj) => `<div class="stat-card"><div class="stat-row"><div class="stat-name"><strong>${label}</strong><span>Last Period</span></div><div><div class="stat-val">${fmt$(obj.sales)}</div></div></div><div class="stat-row"><div class="stat-name"><strong>Profit</strong><span>${fmtPctRaw(obj.profitPct,2)} of sales</span></div><div><div class="stat-val ${obj.profit<0?'delta-neg':'delta-pos'}">${fmt$(obj.profit)}</div></div></div><div class="stat-row"><div class="stat-name"><strong>YTD</strong></div><div><div class="stat-val">${fmt$(obj.ytdSales)}</div><div class="stat-meta ${obj.ytdProfit<0?'delta-neg':'delta-pos'}">Profit ${fmt$(obj.ytdProfit)}</div></div></div></div>`;
+    return `<div class="section-label">Gasoline</div>${card("Gas",a.gasoline)}<div class="section-label">Pharmacy</div>${card("Pharmacy Rx",a.pharmRx)}${card("Pharmacy OTC",a.pharmOtc)}<div class="section-label">Optical & Hearing</div>${card("Optical",a.optical)}${card("Hearing Aids",a.hearing)}`;
+  }
+};
+
+function membershipPeriod(p) {
+  const m = DATA.membership[p];
+  const row = (lbl,val,inc,isPct=false,isCount=false) => {
+    if (val===undefined) return "";
+    const display = isPct ? fmtPct(val,1) : (isCount ? fmtN(val) : fmt$(val));
+    return `<div class="stat-row"><div class="stat-name"><strong>${lbl}</strong></div><div><div class="stat-val">${display}</div>${inc!==undefined?`<div class="stat-meta ${deltaClass(inc)}">${fmtPct(inc)} vs LY</div>`:""}</div></div>`;
+  };
+  return `
+    <div class="stat-card">
+      ${row("Member Income",m.memberIncome.ty,m.memberIncome.inc)}
+      ${row("Gold Signups",m.goldSignups.ty,m.goldSignups.inc,false,true)}
+      ${row("Business Signups",m.bizSignups.ty,m.bizSignups.inc,false,true)}
+      ${row("Reactivations",m.reactivations.ty,m.reactivations.inc,false,true)}
+      ${row("Total Signups+Reactivations",m.total.ty,m.total.inc,false,true)}
+    </div>
+    <div class="stat-card">
+      ${row("New Member Exec %",m.newMemberExecPct.ty,m.newMemberExecPct.inc,true)}
+      ${row("Exec Upgrades",m.execUpgrades.ty,m.execUpgrades.inc,false,true)}
+      ${row("Triple Play %",m.triplePlay.ty,m.triplePlay.inc,true)}
+      ${row("NMAR %",m.nmarPct.ty,m.nmarPct.inc,true)}
+    </div>
+    <div class="stat-card">
+      ${row("Credit Card Apps",m.creditCardApps.ty,m.creditCardApps.inc,false,true)}
+      ${row("New Member CC %",m.newMemberCCPct.ty,m.newMemberCCPct.inc,true)}
+      ${row("New Member Email %",m.newMemberEmailPct.ty,m.newMemberEmailPct.inc,true)}
+    </div>`;
+}
+
+function deptList(period) {
+  const incKey = period==="daily" ? null : period+"Inc";
+  const sorted = [...DATA.departments].sort((a,b) => parseInt(a.code)-parseInt(b.code));
+  return sorted.map(d => {
+    const val = d[period], inc = incKey ? d[incKey] : null;
+    return `<div class="dept-row"><div class="dept-name">${d.code} ${d.name}</div><div class="dept-sales">${fmt$(val)}</div><div class="dept-inc ${inc!==null?deltaClass(inc):''}">${inc!==null?fmtPct(inc):'—'}</div></div>`;
+  }).join("");
+}
+
+function freshContent(cat) {
+  const f = DATA.fresh;
+  if (cat === "overview") {
+    const cats = [
+      {key:"meat",label:"Meat",data:f.meat},
+      {key:"bakery",label:"Bakery",data:f.bakery},
+      {key:"deli",label:"Service Deli",data:f.deli},
+      {key:"produce",label:"Produce",data:f.produce},
+      {key:"foodCourt",label:"Food Court",data:f.foodCourt}
+    ];
+    return `
+      <div class="section-label">Fresh Total — Last Period (P9)</div>
+      <div class="stat-card">
+        <div class="stat-row"><div class="stat-name"><strong>Total Fresh Sales</strong><span>LY ${fmt$(f.total.sales.ly)}</span></div><div><div class="stat-val big">${fmt$(f.total.sales.ty)}</div><div class="stat-meta ${deltaClass(f.total.sales.varLY)}">${arrow(f.total.sales.varLY)} ${fmtPctRaw(f.total.sales.varLY,2)} vs LY</div></div></div>
+        <div class="stat-row"><div class="stat-name"><strong>YTD Sales</strong></div><div><div class="stat-val">${fmt$(f.total.ytdSales.ty)}</div><div class="stat-meta ${deltaClass(f.total.ytdSales.varLY)}">${fmtPctRaw(f.total.ytdSales.varLY,2)} vs LY</div></div></div>
+        <div class="stat-row"><div class="stat-name"><strong>Net Margin</strong><span>${fmtPctRaw(f.total.netMargin.pct,2)} of sales</span></div><div><div class="stat-val">${fmt$(f.total.netMargin.ty)}</div><div class="stat-meta ${deltaClass(f.total.netMargin.varLY)}">${fmtPctRaw(f.total.netMargin.varLY,2)} vs LY</div></div></div>
+      </div>
+      <div class="section-label">By Category — Last Period</div>
+      ${cats.map(c=>`<div class="dept-row"><div class="dept-name">${c.label}</div><div class="dept-sales">${fmt$(c.data.sales.ty)}</div><div class="dept-inc ${deltaClass(c.data.sales.varLY)}">${arrow(c.data.sales.varLY)} ${fmtPctRaw(c.data.sales.varLY,1)}</div></div>`).join("")}`;
+  }
+
+  const d = f[cat];
+  const name = ({meat:"Meat",bakery:"Bakery",deli:"Service Deli",produce:"Produce",foodCourt:"Food Court"})[cat];
+
+  if (cat === "foodCourt") {
+    return `
+      <div class="section-label">${name} — Last Period (P9)</div>
+      <div class="stat-card">
+        <div class="stat-row"><div class="stat-name"><strong>Sales</strong><span>LY ${fmt$(d.sales.ly)} · Bud ${fmt$(d.sales.budget)}</span></div><div><div class="stat-val big">${fmt$(d.sales.ty)}</div><div class="stat-meta ${deltaClass(d.sales.varLY)}">${arrow(d.sales.varLY)} ${fmtPctRaw(d.sales.varLY,2)} vs LY</div><div class="stat-meta ${deltaClass(d.sales.varBudget)}">${arrow(d.sales.varBudget)} ${fmtPctRaw(d.sales.varBudget,2)} vs Bud</div></div></div>
+        <div class="stat-row"><div class="stat-name"><strong>YTD Sales</strong></div><div><div class="stat-val">${fmt$(d.ytdSales.ty)}</div><div class="stat-meta ${deltaClass(d.ytdSales.varLY)}">${fmtPctRaw(d.ytdSales.varLY,2)} vs LY</div></div></div>
+      </div>
+      <div class="section-label">Margin & Payroll</div>
+      <div class="stat-card">
+        <div class="stat-row"><div class="stat-name"><strong>Gross Margin</strong><span>${fmtPctRaw(d.grossMargin.pct,2)} of sales</span></div><div><div class="stat-val">${fmt$(d.grossMargin.ty)}</div><div class="stat-meta ${deltaClass(d.grossMargin.varLY)}">${fmtPctRaw(d.grossMargin.varLY,2)} vs LY</div></div></div>
+        <div class="stat-row"><div class="stat-name"><strong>Payroll</strong><span>${fmtPctRaw(d.payroll.pct,2)} of sales</span></div><div><div class="stat-val">${fmt$(d.payroll.ty)}</div></div></div>
+        <div class="stat-row"><div class="stat-name"><strong>Benefits</strong><span>${fmtPctRaw(d.benefits.pct,2)} of sales</span></div><div><div class="stat-val">${fmt$(d.benefits.ty)}</div></div></div>
+        <div class="stat-row"><div class="stat-name"><strong>Net Profit</strong><span>${fmtPctRaw(d.profit.pct,2)} of sales</span></div><div><div class="stat-val ${d.profit.ty<0?'delta-neg':'delta-pos'}">${fmt$(d.profit.ty)}</div><div class="stat-meta ${deltaClass(d.profit.varLY)}">${fmtPctRaw(d.profit.varLY,2)} vs LY</div></div></div>
+        <div class="stat-row"><div class="stat-name"><strong>YTD Profit</strong></div><div><div class="stat-val ${d.ytdProfit.ty<0?'delta-neg':'delta-pos'}">${fmt$(d.ytdProfit.ty)}</div></div></div>
+      </div>
+      <div class="section-label">Top 10 Items — Period</div>
+      ${d.topItems.map(i=>`<div class="top-item"><div class="rank">#${i.rank}</div><div class="item-name">${i.name}<div style="font-size:11px;color:var(--muted);margin-top:2px">${fmtN(i.units)} units</div></div><div class="item-sales">${fmt$(i.sales)}</div></div>`).join("")}`;
+  }
+
+  return `
+    <div class="section-label">${name} — Last Period (P9)</div>
+    <div class="stat-card">
+      <div class="stat-row"><div class="stat-name"><strong>Sales</strong><span>LY ${fmt$(d.sales.ly)} · Bud ${fmt$(d.sales.budget)}</span></div><div><div class="stat-val big">${fmt$(d.sales.ty)}</div><div class="stat-meta ${deltaClass(d.sales.varLY)}">${arrow(d.sales.varLY)} ${fmtPctRaw(d.sales.varLY,2)} vs LY</div><div class="stat-meta ${deltaClass(d.sales.varBudget)}">${arrow(d.sales.varBudget)} ${fmtPctRaw(d.sales.varBudget,2)} vs Bud</div></div></div>
+      <div class="stat-row"><div class="stat-name"><strong>YTD Sales</strong></div><div><div class="stat-val">${fmt$(d.ytdSales.ty)}</div><div class="stat-meta ${deltaClass(d.ytdSales.varLY)}">${fmtPctRaw(d.ytdSales.varLY,2)} vs LY</div></div></div>
+    </div>
+    <div class="section-label">Margin & Flow</div>
+    <div class="stat-card">
+      <div class="stat-row"><div class="stat-name"><strong>Flow</strong><span>${fmtPctRaw(d.flow.pct,2)} of sales</span></div><div><div class="stat-val">${fmt$(d.flow.ty)}</div></div></div>
+      <div class="stat-row"><div class="stat-name"><strong>Margin before Payroll/Shrink</strong><span>${fmtPctRaw(d.margin.pct,2)} of sales</span></div><div><div class="stat-val">${fmt$(d.margin.ty)}</div><div class="stat-meta ${deltaClass(d.margin.varLY)}">${fmtPctRaw(d.margin.varLY,2)} vs LY</div></div></div>
+      <div class="stat-row"><div class="stat-name"><strong>Net Margin</strong><span>${fmtPctRaw(d.netMargin.pct,2)} of sales</span></div><div><div class="stat-val">${fmt$(d.netMargin.ty)}</div><div class="stat-meta ${deltaClass(d.netMargin.varLY)}">${fmtPctRaw(d.netMargin.varLY,2)} vs LY</div></div></div>
+    </div>
+    <div class="section-label">Payroll & D&D</div>
+    <div class="stat-card">
+      ${d.payroll.ty !== 0 ? `<div class="stat-row"><div class="stat-name"><strong>Payroll (M/B/D pool)</strong><span>${fmtPctRaw(d.payroll.pct,2)} of sales</span></div><div><div class="stat-val">${fmt$(d.payroll.ty)}</div></div></div>` : `<div class="stat-row"><div class="stat-name"><strong>Payroll</strong><span>not allocated</span></div><div><div class="stat-val">—</div></div></div>`}
+      <div class="stat-row"><div class="stat-name"><strong>Whse Salvage/D&D</strong><span>${fmtPctRaw(d.dd.pct,2)} of sales</span></div><div><div class="stat-val ${d.dd.ty<0?'delta-neg':''}">${fmt$(d.dd.ty)}</div></div></div>
+      <div class="stat-row"><div class="stat-name"><strong>Fresh Op Shrink/Overage</strong><span>${fmtPctRaw(d.shrink.pct,2)} of sales</span></div><div><div class="stat-val ${d.shrink.ty<0?'delta-neg':'delta-pos'}">${fmt$(d.shrink.ty)}</div></div></div>
+      ${d.reprocess?`<div class="stat-row"><div class="stat-name"><strong>Reprocess</strong><span>${fmtPctRaw(d.reprocess.pct,2)} of sales</span></div><div><div class="stat-val delta-neg">${fmt$(d.reprocess.ty)}</div></div></div>`:""}
+    </div>
+    <div class="section-label">Top 10 Items — Period</div>
+    ${d.topItems.map(i=>`<div class="top-item"><div class="rank">#${i.rank}</div><div class="item-name">${i.name}<div style="font-size:11px;color:var(--muted);margin-top:2px">${fmtN(i.units)} units</div></div><div class="item-sales">${fmt$(i.sales)}</div></div>`).join("")}`;
+}
+
+function buildSearchIndex() {
+  const idx = [];
+  const s = DATA.sales;
+  idx.push({keys:["yesterday","daily","today","sales today","sales yesterday"],label:"Total Sales — Yesterday",value:fmt$full(s.daily.ty),sub:`${fmtPct(s.daily.inc)} vs LY`});
+  idx.push({keys:["wtd","week to date","week"],label:"Total Sales — WTD",value:fmt$full(s.wtd.ty),sub:`${fmtPct(s.wtd.inc)} vs LY`});
+  idx.push({keys:["ptd","period","period to date"],label:"Total Sales — PTD",value:fmt$full(s.ptd.ty),sub:`${fmtPct(s.ptd.inc)} vs LY`});
+  idx.push({keys:["ytd","year to date","year"],label:"Total Sales — YTD",value:fmt$full(s.ytd.ty),sub:`${fmtPct(s.ytd.inc)} vs LY`});
+  idx.push({keys:["merch","merchandise","merch ytd"],label:"Merch Sales — YTD",value:fmt$full(s.merch.ytd.ty),sub:`${fmtPct(s.merch.ytd.inc)} vs LY`});
+  idx.push({keys:["gas","gasoline","gas ytd"],label:"Gas Sales — YTD",value:fmt$full(s.gas.ytd.ty),sub:`${fmtPct(s.gas.ytd.inc)} vs LY`});
+  idx.push({keys:["traffic","customers"],label:"Traffic — Daily",value:fmtN(s.traffic.daily.ty),sub:`${fmtPct(s.traffic.daily.inc)} vs LY`});
+  idx.push({keys:["avg sale","average sale","basket"],label:"Avg Sale — Daily",value:"$"+s.avgSales.daily.ty,sub:`${fmtPct(s.avgSales.daily.inc)} vs LY`});
+
+  const w = DATA.lastWeek.weekly;
+  idx.push({keys:["last week","mon-sun","lw"],label:"Last Week Total",value:fmt$full(w.totalSales.actual),sub:`Plan ${fmt$(w.totalSales.plan)}`});
+  idx.push({keys:["last week hours","lw hours"],label:"Last Week Hours",value:fmtN(w.hours.actual,0),sub:`Sch ${fmtN(w.hours.schedule,0)}`});
+  idx.push({keys:["last week wage","lw wage"],label:"Last Week Avg Wage",value:"$"+w.avgWage.actual.toFixed(2),sub:`LY $${w.avgWage.ly.toFixed(2)}`});
+
+  const lp = DATA.lastPeriod;
+  idx.push({keys:["last period","lp","p9","period 9"],label:"Last Period Profit",value:fmt$full(lp.profit.total.ty),sub:`${fmtPctRaw(lp.profit.total.varLY,1)}% vs LY`});
+  idx.push({keys:["last period sales"],label:"Last Period Warehouse Sales",value:fmt$full(lp.sales.warehouse.ty),sub:`${fmtPctRaw(lp.sales.warehouse.varLYPct,1)}% vs LY`});
+  idx.push({keys:["last period merch"],label:"Last Period Merch Sales",value:fmt$full(lp.sales.merch.ty),sub:`${fmtPctRaw(lp.sales.merch.varLYPct,1)}% vs LY`});
+  idx.push({keys:["last period margin","last period gp"],label:"Last Period Gross Profit",value:fmt$full(lp.margin.grossProfit.ty),sub:`${fmtPctRaw(lp.margin.grossProfit.pct,2)}%`});
+  idx.push({keys:["last period controllable"],label:"Last Period Controllable Profit",value:fmt$full(lp.profit.controllable.ty),sub:`${fmtPctRaw(lp.profit.controllable.varLY,1)}% vs LY`});
+  idx.push({keys:["last period membership"],label:"Last Period Membership",value:fmt$full(lp.members.total.ty),sub:`${fmtPctRaw(lp.members.total.varLY,2)}% vs LY`});
+
+  const p = DATA.payroll;
+  idx.push({keys:["wage","average wage","avg wage"],label:"Avg Wage (WTD)",value:"$"+p.avgWage.toFixed(2),sub:""});
+  idx.push({keys:["payroll %","wage %","merch pay","merch payroll"],label:"Merch Payroll %",value:fmtPctRaw(p.pctActual*100,2),sub:`Plan ${fmtPctRaw(p.pctPlan*100,2)}`});
+  idx.push({keys:["ot","overtime","ot hours"],label:"OT Hours (ex Sun/SNE)",value:p.otActual.toFixed(2),sub:""});
+  idx.push({keys:["hours actual","hours wtd"],label:"Hours Actual WTD",value:fmtN(p.hoursActual),sub:`Sch ${fmtN(p.hoursSchedule)}`});
+  idx.push({keys:["hours to cut","cut hours"],label:"Hours to Cut",value:fmtN(p.hoursToCut),sub:"to hit merch pay%"});
+  idx.push({keys:["dollars to cut","$ to cut"],label:"$ to Cut",value:fmt$(p.dollarsToCut),sub:"to hit merch pay%"});
+  idx.push({keys:["productivity"],label:"Productivity",value:"$"+p.productivity,sub:"sales per hour"});
+
+  const m = DATA.membership;
+  idx.push({keys:["signups","new members"],label:"Signups+React — PTD",value:fmtN(m.ptd.total.ty),sub:`${fmtPct(m.ptd.total.inc)} vs LY`});
+  idx.push({keys:["exec upgrades"],label:"Exec Upgrades — PTD",value:fmtN(m.ptd.execUpgrades.ty),sub:""});
+  idx.push({keys:["nmar","new member exec"],label:"New Member Exec %",value:fmtPct(m.ptd.newMemberExecPct.ty),sub:""});
+  idx.push({keys:["triple play"],label:"Triple Play — PTD",value:fmtPct(m.ptd.triplePlay.ty),sub:""});
+  idx.push({keys:["credit card","cc apps"],label:"Credit Card Apps — PTD",value:fmtN(m.ptd.creditCardApps.ty),sub:""});
+  idx.push({keys:["ft","full time"],label:"Full Time Count",value:m.ftpt.ft,sub:fmtPct(m.ftpt.ftPct)});
+  idx.push({keys:["pt","part time"],label:"Part Time Count",value:m.ftpt.pt,sub:fmtPct(m.ftpt.ptPct)});
+
+  const f = DATA.fresh;
+  idx.push({keys:["fresh","fresh total"],label:"Fresh Total Sales (P9)",value:fmt$full(f.total.sales.ty),sub:`${fmtPctRaw(f.total.sales.varLY,1)}% vs LY`});
+  idx.push({keys:["meat sales","meat"],label:"Meat Sales (P9)",value:fmt$full(f.meat.sales.ty),sub:`${fmtPctRaw(f.meat.sales.varLY,1)}% vs LY`});
+  idx.push({keys:["meat margin","meat profit"],label:"Meat Net Margin (P9)",value:fmt$(f.meat.netMargin.ty),sub:`${fmtPctRaw(f.meat.netMargin.pct,2)}%`});
+  idx.push({keys:["meat payroll"],label:"Meat Payroll (P9)",value:fmt$(f.meat.payroll.ty),sub:`${fmtPctRaw(f.meat.payroll.pct,2)}%`});
+  idx.push({keys:["bakery sales","bakery"],label:"Bakery Sales (P9)",value:fmt$full(f.bakery.sales.ty),sub:`${fmtPctRaw(f.bakery.sales.varLY,1)}% vs LY`});
+  idx.push({keys:["bakery margin"],label:"Bakery Net Margin (P9)",value:fmt$(f.bakery.netMargin.ty),sub:`${fmtPctRaw(f.bakery.netMargin.pct,2)}%`});
+  idx.push({keys:["bakery payroll"],label:"Bakery Payroll (P9)",value:fmt$(f.bakery.payroll.ty),sub:`${fmtPctRaw(f.bakery.payroll.pct,2)}%`});
+  idx.push({keys:["deli sales","deli","service deli"],label:"Deli Sales (P9)",value:fmt$full(f.deli.sales.ty),sub:`${fmtPctRaw(f.deli.sales.varLY,1)}% vs LY`});
+  idx.push({keys:["deli margin"],label:"Deli Net Margin (P9)",value:fmt$(f.deli.netMargin.ty),sub:`${fmtPctRaw(f.deli.netMargin.pct,2)}%`});
+  idx.push({keys:["deli payroll"],label:"Deli Payroll (P9)",value:fmt$(f.deli.payroll.ty),sub:`${fmtPctRaw(f.deli.payroll.pct,2)}%`});
+  idx.push({keys:["produce sales","produce"],label:"Produce Sales (P9)",value:fmt$full(f.produce.sales.ty),sub:`${fmtPctRaw(f.produce.sales.varLY,1)}% vs LY`});
+  idx.push({keys:["produce margin"],label:"Produce Net Margin (P9)",value:fmt$(f.produce.netMargin.ty),sub:`${fmtPctRaw(f.produce.netMargin.pct,2)}%`});
+  idx.push({keys:["food court","foodcourt","fc"],label:"Food Court Sales (P9)",value:fmt$full(f.foodCourt.sales.ty),sub:`${fmtPctRaw(f.foodCourt.sales.varLY,1)}% vs LY`});
+  idx.push({keys:["food court profit","fc profit"],label:"Food Court Profit (P9)",value:fmt$(f.foodCourt.profit.ty),sub:`${fmtPctRaw(f.foodCourt.profit.pct,2)}%`});
+
+  DATA.departments.forEach(d => {
+    const lname = d.name.toLowerCase();
+    idx.push({keys:[lname,d.code,"dept "+d.code,"dept "+lname],label:`${d.code} ${d.name} — PTD`,value:fmt$full(d.ptd),sub:`${fmtPct(d.ptdInc)} vs LY · YTD ${fmt$(d.ytd)}`});
+  });
+
+  const a = DATA.ancillary;
+  idx.push({keys:["pharmacy","rx","pharm rx"],label:"Pharmacy Rx (P9)",value:fmt$full(a.pharmRx.sales),sub:`Profit ${fmt$(a.pharmRx.profit)}`});
+  idx.push({keys:["pharm otc","otc"],label:"Pharmacy OTC (P9)",value:fmt$full(a.pharmOtc.sales),sub:`Profit ${fmt$(a.pharmOtc.profit)}`});
+  idx.push({keys:["optical"],label:"Optical (P9)",value:fmt$full(a.optical.sales),sub:`Profit ${fmt$(a.optical.profit)}`});
+  idx.push({keys:["hearing","hearing aids"],label:"Hearing Aids (P9)",value:fmt$full(a.hearing.sales),sub:`Profit ${fmt$(a.hearing.profit)}`});
+  return idx;
+}
+
+const searchIndex = buildSearchIndex();
+
+function search(q) {
+  q = q.toLowerCase().trim();
+  if (!q) return [];
+  const tokens = q.split(/\s+/);
+  const matches = searchIndex.filter(item =>
+    tokens.every(t => item.keys.some(k => k.includes(t)) || item.label.toLowerCase().includes(t))
+  );
+  matches.sort((a,b) => {
+    const aS = a.keys.some(k=>k.startsWith(q)) || a.label.toLowerCase().startsWith(q);
+    const bS = b.keys.some(k=>k.startsWith(q)) || b.label.toLowerCase().startsWith(q);
+    if (aS && !bS) return -1;
+    if (bS && !aS) return 1;
+    return a.label.length - b.label.length;
+  });
+  return matches.slice(0, 12);
+}
+
+document.getElementById("dataAsOf").innerHTML = `Dash ${DATA.asOfDashboard} · PARIS ${DATA.asOfParis}<br>P&L ${DATA.asOfFinancial}`;
+
+document.querySelectorAll(".tile").forEach(t => {
+  t.addEventListener("click", () => {
+    renderPanel(t.dataset.panel);
+    document.getElementById("panelView").classList.add("active");
+    setTimeout(attachPanelInteractions, 30);
+  });
+});
+
+document.getElementById("backBtn").addEventListener("click", () => {
+  document.getElementById("panelView").classList.remove("active");
+});
+
+function attachPanelInteractions() {
+  const memToggle = document.getElementById("memToggle");
+  if (memToggle) {
+    memToggle.querySelectorAll(".toggle").forEach(t => {
+      t.addEventListener("click", () => {
+        memToggle.querySelectorAll(".toggle").forEach(x => x.classList.remove("active"));
+        t.classList.add("active");
+        document.getElementById("memContent").innerHTML = membershipPeriod(t.dataset.period);
+      });
+    });
+  }
+  const deptToggle = document.getElementById("deptToggle");
+  if (deptToggle) {
+    deptToggle.querySelectorAll(".toggle").forEach(t => {
+      t.addEventListener("click", () => {
+        deptToggle.querySelectorAll(".toggle").forEach(x => x.classList.remove("active"));
+        t.classList.add("active");
+        document.getElementById("deptList").innerHTML = deptList(t.dataset.period);
+      });
+    });
+  }
+  const freshToggle = document.getElementById("freshToggle");
+  if (freshToggle) {
+    freshToggle.querySelectorAll(".toggle").forEach(t => {
+      t.addEventListener("click", () => {
+        freshToggle.querySelectorAll(".toggle").forEach(x => x.classList.remove("active"));
+        t.classList.add("active");
+        document.getElementById("freshContent").innerHTML = freshContent(t.dataset.cat);
+      });
+    });
+  }
+}
+
+const searchEl = document.getElementById("search");
+const resultsEl = document.getElementById("results");
+
+searchEl.addEventListener("input", () => {
+  const q = searchEl.value;
+  if (!q.trim()) { resultsEl.classList.remove("active"); resultsEl.innerHTML = ""; return; }
+  const matches = search(q);
+  if (matches.length === 0) {
+    resultsEl.innerHTML = '<div class="empty">No matches. Try "yesterday", "wage", "meat", "last period".</div>';
+  } else {
+    resultsEl.innerHTML = matches.map(m => `<div class="result"><div class="result-label"><strong>${m.label}</strong>${m.sub?`<span style="font-size:12px;color:var(--muted)">${m.sub}</span>`:''}</div><div class="result-value">${m.value}</div></div>`).join("");
+  }
+  resultsEl.classList.add("active");
+});
+
+searchEl.addEventListener("focus", () => {
+  if (searchEl.value.trim()) resultsEl.classList.add("active");
+});
+
+
+(async () => {
+  try {
+    if (window.storage) {
+      const stored = await window.storage.get("walkbook_data");
+      if (stored && stored.value) Object.assign(DATA, JSON.parse(stored.value));
+    }
+  } catch(e) {}
+})();
+</script>
+</body>
+</html>
