@@ -7,556 +7,455 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>1194 Walk Book</title>
 <style>
-  :root { --bg:#0a0a0a; --panel:#161616; --panel-2:#1f1f1f; --border:#2a2a2a; --text:#f5f5f5; --muted:#888; --green:#4ade80; --red:#f87171; --amber:#fbbf24; --accent:#60a5fa; }
-  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { margin:0; padding:0; background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",sans-serif; font-size:16px; line-height:1.3; -webkit-font-smoothing:antialiased; overscroll-behavior:none; }
-  .app { max-width:820px; margin:0 auto; padding:env(safe-area-inset-top, 12px) 14px 80px; }
-  header { padding:8px 0 14px; display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
-  .title { font-size:20px; font-weight:800; letter-spacing:-0.02em; }
-  .title small { color:var(--muted); font-weight:500; font-size:12px; margin-left:6px; }
-  .data-as-of { font-size:11px; color:var(--muted); text-align:right; }
-  .search-wrap { position:sticky; top:0; z-index:20; background:var(--bg); padding:4px 0 10px; }
-  .search { width:100%; padding:14px 16px; font-size:17px; background:var(--panel); color:var(--text); border:1.5px solid var(--border); border-radius:14px; outline:none; font-weight:500; }
-  .search:focus { border-color:var(--accent); }
-  .search::placeholder { color:#666; }
-  .results { display:none; margin-top:8px; background:var(--panel); border-radius:14px; overflow:hidden; }
-  .results.active { display:block; }
-  .result { padding:14px 16px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:baseline; gap:12px; }
-  .result:last-child { border-bottom:none; }
-  .result-label { font-size:14px; color:var(--muted); flex:1; min-width:0; }
-  .result-label strong { color:var(--text); display:block; font-size:16px; font-weight:600; margin-bottom:2px; }
-  .result-value { font-size:20px; font-weight:700; white-space:nowrap; font-variant-numeric:tabular-nums; }
-  .tiles { display:grid; grid-template-columns:repeat(2, 1fr); gap:10px; margin-top:4px; }
-  .tile { background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:16px 14px; cursor:pointer; transition:transform .08s, background .15s; text-align:left; }
-  .tile:active { transform:scale(0.97); background:var(--panel-2); }
-  .tile-icon { font-size:22px; margin-bottom:8px; }
-  .tile-name { font-size:15px; font-weight:700; letter-spacing:-0.01em; }
-  .tile-hint { font-size:12px; color:var(--muted); margin-top:4px; }
-  .panel-view { position:fixed; inset:0; background:var(--bg); transform:translateY(100%); transition:transform .25s ease; z-index:50; display:flex; flex-direction:column; padding-top:env(safe-area-inset-top, 12px); }
-  .panel-view.active { transform:translateY(0); }
-  .panel-header { display:flex; align-items:center; justify-content:space-between; padding:12px 14px; border-bottom:1px solid var(--border); }
-  .panel-title { font-size:18px; font-weight:700; }
-  .back-btn { background:var(--panel); border:none; color:var(--text); padding:8px 14px; border-radius:10px; font-size:15px; font-weight:600; }
-  .panel-body { overflow-y:auto; flex:1; padding:14px; -webkit-overflow-scrolling:touch; }
-  .section-label { font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin:16px 0 8px; padding:0 2px; }
-  .section-label:first-child { margin-top:0; }
-  .stat-card { background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:14px 16px; margin-bottom:8px; }
-  .stat-row { display:flex; justify-content:space-between; align-items:baseline; gap:12px; }
-  .stat-row + .stat-row { margin-top:10px; padding-top:10px; border-top:1px solid var(--border); }
-  .stat-name { font-size:14px; color:var(--muted); flex:1; }
-  .stat-name strong { display:block; color:var(--text); font-size:16px; font-weight:600; margin-bottom:2px; }
-  .stat-name span { font-size:11px; }
-  .stat-val { font-size:22px; font-weight:700; font-variant-numeric:tabular-nums; letter-spacing:-0.02em; }
-  .stat-val.big { font-size:28px; }
-  .stat-meta { font-size:12px; color:var(--muted); text-align:right; font-variant-numeric:tabular-nums; }
-  .delta-pos { color:var(--green); }
-  .delta-neg { color:var(--red); }
-  .delta-warn { color:var(--amber); }
-  .quad { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-  .quad-cell { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:12px; }
-  .quad-label { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.08em; font-weight:600; }
-  .quad-val { font-size:22px; font-weight:700; margin-top:4px; font-variant-numeric:tabular-nums; letter-spacing:-0.02em; }
-  .quad-sub { font-size:12px; margin-top:2px; font-variant-numeric:tabular-nums; }
-  .dept-row { display:grid; grid-template-columns:1fr auto auto; gap:10px; align-items:baseline; padding:10px 14px; background:var(--panel); border:1px solid var(--border); border-radius:10px; margin-bottom:6px; }
-  .dept-name { font-size:14px; font-weight:600; }
-  .dept-sales { font-size:15px; font-weight:700; font-variant-numeric:tabular-nums; }
-  .dept-inc { font-size:13px; font-variant-numeric:tabular-nums; min-width:60px; text-align:right; }
-  .toggle-row { display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap; }
-  .toggle { flex:1; padding:9px 6px; background:var(--panel); border:1px solid var(--border); border-radius:10px; color:var(--muted); font-size:12px; font-weight:600; text-align:center; cursor:pointer; min-width:0; }
-  .toggle.active { background:var(--accent); color:#000; border-color:var(--accent); }
-  .week-strip { display:grid; grid-template-columns:repeat(7, 1fr); gap:4px; margin-bottom:8px; }
-  .day-cell { background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:8px 4px; text-align:center; }
-  .day-dow { font-size:10px; color:var(--muted); font-weight:700; text-transform:uppercase; }
-  .day-num { font-size:13px; font-weight:700; margin-top:4px; font-variant-numeric:tabular-nums; }
-  .day-actual { font-size:9px; color:var(--muted); margin-top:2px; }
-  .note { font-size:12px; color:var(--muted); margin:8px 0; line-height:1.5; }
-  .empty { padding:20px; text-align:center; color:var(--muted); font-size:14px; }
-  .top-item { padding:8px 12px; background:var(--panel); border:1px solid var(--border); border-radius:8px; margin-bottom:4px; display:grid; grid-template-columns:auto 1fr auto; gap:10px; align-items:baseline; }
-  .rank { color:var(--muted); font-size:12px; font-weight:700; font-variant-numeric:tabular-nums; min-width:22px; }
-  .item-name { font-size:13px; font-weight:500; min-width:0; word-break:break-word; }
-  .item-sales { font-size:14px; font-weight:700; font-variant-numeric:tabular-nums; text-align:right; }
+:root{--bg:#0a0a0a;--panel:#161616;--panel-2:#1f1f1f;--border:#2a2a2a;--text:#f5f5f5;--muted:#888;--green:#4ade80;--red:#f87171;--amber:#fbbf24;--accent:#60a5fa}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",sans-serif;font-size:16px;line-height:1.3;-webkit-font-smoothing:antialiased;overscroll-behavior:none}
+.app{max-width:820px;margin:0 auto;padding:env(safe-area-inset-top,12px) 14px 80px}
+header{padding:8px 0 14px;display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.title{font-size:20px;font-weight:800;letter-spacing:-.02em}
+.title small{color:var(--muted);font-weight:500;font-size:12px;margin-left:6px}
+.data-as-of{font-size:11px;color:var(--muted);text-align:right}
+.search-wrap{position:sticky;top:0;z-index:20;background:var(--bg);padding:4px 0 10px}
+.search{width:100%;padding:14px 16px;font-size:17px;background:var(--panel);color:var(--text);border:1.5px solid var(--border);border-radius:14px;outline:none;font-weight:500}
+.search:focus{border-color:var(--accent)}
+.search::placeholder{color:#666}
+.results{display:none;margin-top:8px;background:var(--panel);border-radius:14px;overflow:hidden}
+.results.active{display:block}
+.result{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.result:last-child{border-bottom:none}
+.result-label{font-size:14px;color:var(--muted);flex:1;min-width:0}
+.result-label strong{color:var(--text);display:block;font-size:16px;font-weight:600;margin-bottom:2px}
+.result-value{font-size:18px;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+.tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:4px}
+.tile{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:16px 14px;cursor:pointer;transition:transform .08s,background .15s;text-align:left}
+.tile:active{transform:scale(.97);background:var(--panel-2)}
+.tile-icon{font-size:22px;margin-bottom:8px}
+.tile-name{font-size:15px;font-weight:700;letter-spacing:-.01em}
+.tile-hint{font-size:12px;color:var(--muted);margin-top:4px}
+.panel-view{position:fixed;inset:0;background:var(--bg);transform:translateY(100%);transition:transform .25s ease;z-index:50;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,12px)}
+.panel-view.active{transform:translateY(0)}
+.panel-header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--border)}
+.panel-title{font-size:18px;font-weight:700}
+.back-btn{background:var(--panel);border:none;color:var(--text);padding:8px 14px;border-radius:10px;font-size:15px;font-weight:600}
+.panel-body{overflow-y:auto;flex:1;padding:14px;-webkit-overflow-scrolling:touch}
+.section-label{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:16px 0 8px;padding:0 2px}
+.section-label:first-child{margin-top:0}
+.stat-card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:8px}
+.stat-row{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.stat-row+.stat-row{margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+.stat-name{font-size:14px;color:var(--muted);flex:1}
+.stat-name strong{display:block;color:var(--text);font-size:16px;font-weight:600;margin-bottom:2px}
+.stat-name span{font-size:11px}
+.stat-val{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.stat-val.big{font-size:28px}
+.stat-meta{font-size:12px;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+.delta-pos{color:var(--green)}
+.delta-neg{color:var(--red)}
+.delta-warn{color:var(--amber)}
+.quad{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.quad-cell{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:12px}
+.quad-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:600}
+.quad-val{font-size:22px;font-weight:700;margin-top:4px;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.quad-sub{font-size:12px;margin-top:2px;font-variant-numeric:tabular-nums}
+.dept-row{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:baseline;padding:10px 14px;background:var(--panel);border:1px solid var(--border);border-radius:10px;margin-bottom:6px}
+.dept-name{font-size:14px;font-weight:600}
+.dept-sales{font-size:15px;font-weight:700;font-variant-numeric:tabular-nums}
+.dept-inc{font-size:13px;font-variant-numeric:tabular-nums;min-width:60px;text-align:right}
+.toggle-row{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.toggle{flex:1;padding:9px 6px;background:var(--panel);border:1px solid var(--border);border-radius:10px;color:var(--muted);font-size:12px;font-weight:600;text-align:center;cursor:pointer;min-width:0}
+.toggle.active{background:var(--accent);color:#000;border-color:var(--accent)}
+.week-strip{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:8px}
+.day-cell{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:8px 4px;text-align:center}
+.day-dow{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase}
+.day-num{font-size:13px;font-weight:700;margin-top:4px;font-variant-numeric:tabular-nums}
+.day-actual{font-size:9px;color:var(--muted);margin-top:2px}
+.note{font-size:12px;color:var(--muted);margin:8px 0;line-height:1.5}
+.empty{padding:20px;text-align:center;color:var(--muted);font-size:14px}
+.top-item{padding:8px 12px;background:var(--panel);border:1px solid var(--border);border-radius:8px;margin-bottom:4px;display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:baseline}
+.rank{color:var(--muted);font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;min-width:22px}
+.item-name{font-size:13px;font-weight:500;min-width:0;word-break:break-word}
+.item-sales{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;text-align:right}
+.cat-group{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:8px;cursor:pointer}
+.cat-group:active{background:var(--panel-2)}
+.cat-group-head{display:flex;justify-content:space-between;align-items:baseline}
+.cat-group-name{font-size:15px;font-weight:700}
+.cat-group-meta{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.cat-row{padding:10px 12px;background:var(--panel-2);border:1px solid var(--border);border-radius:8px;margin-bottom:5px;display:grid;grid-template-columns:1fr auto auto auto;gap:10px;align-items:baseline}
+.cat-rname{font-size:13px;font-weight:600;min-width:0}
+.cat-rsales{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums}
+.cat-rinc{font-size:12px;font-variant-numeric:tabular-nums;min-width:55px;text-align:right}
+.cat-roh{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;min-width:50px;text-align:right}
 </style>
 </head>
 <body>
 <div class="app">
-  <header>
-    <div><div class="title">1194 Perrysburg <small>Walk Book</small></div></div>
-    <div class="data-as-of" id="dataAsOf"></div>
-  </header>
-  <div class="search-wrap">
-    <input type="search" class="search" id="search" placeholder="Search — try 'wage', 'meat', 'last period'" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
-    <div class="results" id="results"></div>
-  </div>
-  <div class="tiles">
-    <button class="tile" data-panel="sales"><div class="tile-icon">💰</div><div class="tile-name">Sales</div><div class="tile-hint">Yesterday · Running Wk · PTD · YTD</div></button>
-    <button class="tile" data-panel="lastweek"><div class="tile-icon">📅</div><div class="tile-name">Last Week</div><div class="tile-hint">Closed Mon–Sun (what VPs ask)</div></button>
-    <button class="tile" data-panel="lastperiod"><div class="tile-icon">📈</div><div class="tile-name">Last Period</div><div class="tile-hint">P9 closed — full P&L</div></button>
-    <button class="tile" data-panel="payroll"><div class="tile-icon">⏱️</div><div class="tile-name">Payroll</div><div class="tile-hint">Hours · Wage% · OT</div></button>
-    <button class="tile" data-panel="membership"><div class="tile-icon">🪪</div><div class="tile-name">Membership</div><div class="tile-hint">Signups · Exec · NMAR</div></button>
-    <button class="tile" data-panel="depts"><div class="tile-icon">🛒</div><div class="tile-name">Departments</div><div class="tile-hint">Sales by dept</div></button>
-    <button class="tile" data-panel="fresh"><div class="tile-icon">🥩</div><div class="tile-name">Fresh</div><div class="tile-hint">Meat·Bakery·Deli·Produce·FC</div></button>
-    <button class="tile" data-panel="shrink"><div class="tile-icon">📉</div><div class="tile-name">Shrink & D&D</div><div class="tile-hint">By category</div></button>
-    <button class="tile" data-panel="ancillary"><div class="tile-icon">⛽</div><div class="tile-name">Ancillary</div><div class="tile-hint">Gas · Pharm · Optical</div></button>
-  </div>
+<header><div><div class="title">1194 Perrysburg <small>Walk Book</small></div></div><div class="data-as-of" id="dataAsOf"></div></header>
+<div class="search-wrap"><input type="search" class="search" id="search" placeholder="Search — try 'wage', 'meat', 'red wine'" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><div class="results" id="results"></div></div>
+<div class="tiles">
+<button class="tile" data-panel="sales"><div class="tile-icon">💰</div><div class="tile-name">Sales</div><div class="tile-hint">Yesterday · Running Wk · PTD · YTD</div></button>
+<button class="tile" data-panel="lastweek"><div class="tile-icon">📅</div><div class="tile-name">Last Week</div><div class="tile-hint">Closed Mon–Sun (what VPs ask)</div></button>
+<button class="tile" data-panel="lastperiod"><div class="tile-icon">📈</div><div class="tile-name">Last Period</div><div class="tile-hint">P9 closed — full P&L</div></button>
+<button class="tile" data-panel="payroll"><div class="tile-icon">⏱️</div><div class="tile-name">Payroll</div><div class="tile-hint">Hours · Wage% · OT</div></button>
+<button class="tile" data-panel="membership"><div class="tile-icon">🪪</div><div class="tile-name">Membership</div><div class="tile-hint">Signups · Exec · NMAR</div></button>
+<button class="tile" data-panel="depts"><div class="tile-icon">🛒</div><div class="tile-name">Departments</div><div class="tile-hint">Sales by dept</div></button>
+<button class="tile" data-panel="categories"><div class="tile-icon">🔎</div><div class="tile-name">Categories</div><div class="tile-hint">Drill-down by area</div></button>
+<button class="tile" data-panel="fresh"><div class="tile-icon">🥩</div><div class="tile-name">Fresh</div><div class="tile-hint">Meat·Bakery·Deli·Produce·FC</div></button>
+<button class="tile" data-panel="shrink"><div class="tile-icon">📉</div><div class="tile-name">Shrink & D&D</div><div class="tile-hint">By category</div></button>
+<button class="tile" data-panel="ancillary"><div class="tile-icon">⛽</div><div class="tile-name">Ancillary</div><div class="tile-hint">Gas · Pharm · Optical</div></button>
 </div>
-<div class="panel-view" id="panelView">
-  <div class="panel-header">
-    <button class="back-btn" id="backBtn">← Back</button>
-    <div class="panel-title" id="panelTitle"></div>
-    <div style="width:60px"></div>
-  </div>
-  <div class="panel-body" id="panelBody"></div>
 </div>
+<div class="panel-view" id="panelView"><div class="panel-header"><button class="back-btn" id="backBtn">← Back</button><div class="panel-title" id="panelTitle"></div><div style="width:60px"></div></div><div class="panel-body" id="panelBody"></div></div>
 <script>
-const DATA = {
-  asOfDashboard:"May 16", asOfParis:"May 17", asOfFinancial:"May 13 (P9)",
-  sales:{
-    daily:{ty:876303,inc:0.0799}, wtd:{ty:4456291,inc:0.1228}, ptd:{ty:4456291,inc:0.1228}, ytd:{ty:175677152,inc:0.0784},
-    merch:{daily:{ty:685349,inc:0.0459},wtd:{ty:3116679,inc:0.0393},ptd:{ty:3116679,inc:0.0393},ytd:{ty:133837755,inc:0.0668}},
-    gas:{daily:{ty:122834,inc:0.3601},wtd:{ty:847873,inc:0.4705},ptd:{ty:847873,inc:0.4705},ytd:{ty:23270952,inc:0.0856}},
-    traffic:{daily:{ty:4290,inc:0.0317},wtd:{ty:22184,inc:0.0248},ptd:{ty:22184,inc:0.0248},ytd:{ty:940467,inc:0.0233}},
-    avgSales:{daily:{ty:189,inc:0.0328},wtd:{ty:179,inc:0.0573},ptd:{ty:179,inc:0.0573},ytd:{ty:174,inc:0.0627}}
-  },
-  lastWeek:{
-    label:"Mon 5/11 – Sun 5/17",
-    weekly:{
-      totalSales:{plan:5115536,actual:5190929,ly:4645665}, merchSales:{plan:3856946,actual:3728791,ly:3564116},
-      gasSales:{plan:833799,actual:954397,ly:662731}, ancillary:{plan:490050,actual:518098,ly:418817},
-      hours:{schedule:5907.69,actual:5584.93,ly:5809.02}, dollars:{schedule:192000,actual:188042,ly:184009},
-      otHours:{schedule:20.00,actual:1.40,ly:0.58}, avgWage:{schedule:32.50,actual:33.67,ly:31.68},
-      pctMerch:{schedule:0.0498,actual:0.0504,ly:0.0516}, pctTotal:{schedule:0.0375,actual:0.0362,ly:0.0396}
-    },
-    days:[
-      {dow:"MON",date:"5/11",total:713384},{dow:"TUE",date:"5/12",total:677071},
-      {dow:"WED",date:"5/13",total:703782},{dow:"THU",date:"5/14",total:708288},
-      {dow:"FRI",date:"5/15",total:777464},{dow:"SAT",date:"5/16",total:876303},
-      {dow:"SUN",date:"5/17",total:734638}
-    ]
-  },
-  lastPeriod:{
-    label:"FY2026 P9 (closed)",
-    sales:{
-      warehouse:{ty:20621742,ly:17890311,budget:19254078,varBudgetPct:7.10,varLYPct:15.27},
-      merch:{ty:14816425,ly:13817401,budget:14744182,varBudgetPct:0.49,varLYPct:7.23},
-      gas:{ty:3776218,ly:2543108,budget:2662256,varBudgetPct:41.84,varLYPct:48.49},
-      anc:{ty:2284740,ly:1779724,budget:2092382,varBudgetPct:9.19,varLYPct:28.38}
-    },
-    margin:{merch:{ty:1929467,pct:13.02,varLY:12.12},grossProfit:{ty:2728392,pct:13.23,varLY:15.49}},
-    members:{total:{ty:473071,pct:2.29,varLY:4.37},regular:{ty:301910,pct:1.46,varLY:6.95},exec:{ty:171161,pct:0.83,varLY:0.11}},
-    expenses:{
-      salaries:{ty:742822,pct:3.60,varLY:6.52}, benefits:{ty:430837,pct:2.09,varLY:7.45},
-      workersComp:{ty:14856,pct:0.07,varLY:6.52}, totalControllables:{ty:1295625,pct:6.28,varLY:0.77},
-      totalNonControll:{ty:379250,pct:1.84,varLY:3.18}
-    },
-    profit:{
-      controllable:{ty:1432767,pct:6.95,varLY:33.08}, total:{ty:1053517,pct:5.11,varLY:48.57},
-      exGas:{ty:692122,pct:4.11,varLY:58.44}, exGasEcom:{ty:607096,pct:3.60,varLY:64.66}
-    }
-  },
-  payroll:{
-    merchSalesPlan:3856946, merchSalesActual:3728791, merchSalesVar:-128155, merchSalesIncLY:0.0462,
-    dollarsSchedule:199138, dollarsPlan:192000, dollarsActual:188042, dollarsVarPlan:-3958, dollarsToCut:2421,
-    pctPlan:0.0498, pctActual:0.0504, pctVarPlan:6, pctVarLY:-12,
-    hoursSchedule:5952, hoursPlan:5908, hoursActual:5585, hoursVarPlan:-323, hoursIncLY:-0.0386, hoursToCut:72,
-    otActual:1.40, otSNE:0, avgWage:33.67, productivity:668
-  },
-  membership:{
-    daily:{memberIncome:{ty:5582,inc:0.0255},goldSignups:{ty:17,inc:0.3077},bizSignups:{ty:2,inc:0},reactivations:{ty:1,inc:-0.50},total:{ty:20,inc:0.3333},newMemberExecPct:{ty:0.70,inc:0.05},execUpgrades:{ty:14,inc:0},triplePlay:{ty:0.15,inc:0.125},creditCardApps:{ty:6,inc:-0.1429},newMemberCCPct:{ty:0.20,inc:0.50},nmarPct:{ty:0.95,inc:0.0179},newMemberEmailPct:{ty:1,inc:0}},
-    wtd:{memberIncome:{ty:33789,inc:0.0162},goldSignups:{ty:53,inc:0.1277},bizSignups:{ty:5,inc:4},reactivations:{ty:6,inc:-0.40},total:{ty:64,inc:0.1034},newMemberExecPct:{ty:0.7188,inc:0.1267},execUpgrades:{ty:67,inc:0.1552},triplePlay:{ty:0.2656,inc:0.1004},creditCardApps:{ty:34,inc:0.0625},newMemberCCPct:{ty:0.2812,inc:-0.0404},nmarPct:{ty:0.9688,inc:0.0033},newMemberEmailPct:{ty:0.9844,inc:0.0016}},
-    ptd:{memberIncome:{ty:33789,inc:0.0162},goldSignups:{ty:53,inc:0.1277},bizSignups:{ty:5,inc:4},reactivations:{ty:6,inc:-0.40},total:{ty:64,inc:0.1034},newMemberExecPct:{ty:0.7188,inc:0.1267},execUpgrades:{ty:67,inc:0.1552},triplePlay:{ty:0.2656,inc:0.1004},creditCardApps:{ty:34,inc:0.0625},newMemberCCPct:{ty:0.2812,inc:-0.0404},nmarPct:{ty:0.9688,inc:0.0033},newMemberEmailPct:{ty:0.9844,inc:0.0016}},
-    ytd:{memberIncome:{ty:4412207,inc:0.0549},goldSignups:{ty:2544,inc:-0.1667},bizSignups:{ty:56,inc:-0.0968},reactivations:{ty:378,inc:-0.2745},total:{ty:2978,inc:-0.181},newMemberExecPct:{ty:0.5527,inc:0.0222},execUpgrades:{ty:3301,inc:0.104},triplePlay:{ty:0.2122,inc:-0.0005},creditCardApps:{ty:1450,inc:-0.0461},newMemberCCPct:{ty:0.2283,inc:-0.0151},nmarPct:{ty:0.87,inc:-0.0709},newMemberEmailPct:{ty:0.9839,inc:-0.0024}},
-    ftpt:{ft:151,ftPct:0.5763,pt:102,ptPct:0.4237,lpt:9}
-  },
-  departments:[
-    {code:"11",name:"TOBACCO",daily:132,wtd:472,ptd:472,ytd:16204,wtdInc:0.315,ptdInc:0.315,ytdInc:0.070},
-    {code:"12",name:"CANDY",daily:62859,wtd:301074,ptd:301074,ytd:12879449,wtdInc:0.103,ptdInc:0.103,ytdInc:0.089},
-    {code:"13",name:"FOOD",daily:63702,wtd:305316,ptd:305316,ytd:14249024,wtdInc:0.080,ptdInc:0.080,ytdInc:0.121},
-    {code:"14",name:"SUNDRIES",daily:123355,wtd:565505,ptd:565505,ytd:21545319,wtdInc:0.164,ptdInc:0.164,ytdInc:0.047},
-    {code:"16",name:"LIQUOR",daily:14974,wtd:68453,ptd:68453,ytd:2545667,wtdInc:-0.033,ptdInc:-0.033,ytdInc:-0.030},
-    {code:"17",name:"COOLER",daily:32339,wtd:152784,ptd:152784,ytd:6924151,wtdInc:-0.064,ptdInc:-0.064,ytdInc:0.010},
-    {code:"18",name:"FROZEN FD",daily:43710,wtd:196051,ptd:196051,ytd:8182158,wtdInc:0.036,ptdInc:0.036,ytdInc:0.043},
-    {code:"19",name:"DELI",daily:31635,wtd:142106,ptd:142106,ytd:6655271,wtdInc:0.029,ptdInc:0.029,ytdInc:0.049},
-    {code:"20",name:"HABA",daily:35432,wtd:170857,ptd:170857,ytd:7843707,wtdInc:0.097,ptdInc:0.097,ytdInc:0.069},
-    {code:"22",name:"TIRES",daily:4557,wtd:33667,ptd:33667,ytd:1673319,wtdInc:-0.175,ptdInc:-0.175,ytdInc:0.111},
-    {code:"23",name:"HARDWARE",daily:12282,wtd:61361,ptd:61361,ytd:2765209,wtdInc:-0.043,ptdInc:-0.043,ytdInc:-0.008},
-    {code:"24",name:"MAJORS",daily:18821,wtd:93144,ptd:93144,ytd:5911981,wtdInc:0.051,ptdInc:0.051,ytdInc:0.261},
-    {code:"25",name:"AUTO",daily:1466,wtd:7779,ptd:7779,ytd:437301,wtdInc:-0.167,ptdInc:-0.167,ytdInc:-0.191},
-    {code:"26",name:"SPORTS",daily:12301,wtd:59363,ptd:59363,ytd:1237512,wtdInc:-0.031,ptdInc:-0.031,ytdInc:-0.161},
-    {code:"27",name:"GARDEN",daily:29717,wtd:131493,ptd:131493,ytd:2781409,wtdInc:0.043,ptdInc:0.043,ytdInc:0.028},
-    {code:"28",name:"TOYS/SEAS",daily:3535,wtd:13020,ptd:13020,ytd:848479,wtdInc:0.297,ptdInc:0.297,ytdInc:-0.244},
-    {code:"29",name:"STAMPS",daily:78,wtd:2099,ptd:2099,ytd:180503,wtdInc:0.154,ptdInc:0.154,ytdInc:-0.154},
-    {code:"31",name:"W APPAREL",daily:12899,wtd:65617,ptd:65617,ytd:2540486,wtdInc:-0.185,ptdInc:-0.185,ytdInc:-0.017},
-    {code:"32",name:"HOUSEWRS",daily:4182,wtd:15454,ptd:15454,ytd:797147,wtdInc:-0.067,ptdInc:-0.067,ytdInc:-0.254},
-    {code:"33",name:"SM APPL",daily:16505,wtd:70048,ptd:70048,ytd:3519319,wtdInc:0.055,ptdInc:0.055,ytdInc:-0.041},
-    {code:"34",name:"DOMESTICS",daily:5772,wtd:24464,ptd:24464,ytd:1331410,wtdInc:-0.293,ptdInc:-0.293,ytdInc:-0.080},
-    {code:"35",name:"JEWELRY",daily:8800,wtd:11700,ptd:11700,ytd:1955192,wtdInc:-0.793,ptdInc:-0.793,ytdInc:0.015},
-    {code:"36",name:"MEDIA",daily:120,wtd:709,ptd:709,ytd:291643,wtdInc:-0.452,ptdInc:-0.452,ytdInc:0.108},
-    {code:"38",name:"HOME FURN",daily:2785,wtd:10753,ptd:10753,ytd:1008770,wtdInc:0.042,ptdInc:0.042,ytdInc:-0.119},
-    {code:"39",name:"M APPAREL",daily:17244,wtd:68093,ptd:68093,ytd:3190172,wtdInc:-0.048,ptdInc:-0.048,ytdInc:0.040},
-    {code:"44",name:"SPCL EVNT",daily:6236,wtd:34429,ptd:34429,ytd:715115,wtdInc:8.110,ptdInc:8.110,ytdInc:0.709},
-    {code:"61",name:"MEAT",daily:54078,wtd:206842,ptd:206842,ytd:8714311,wtdInc:0.122,ptdInc:0.122,ytdInc:0.147},
-    {code:"62",name:"BAKERY",daily:15019,wtd:63723,ptd:63723,ytd:2603769,wtdInc:0.190,ptdInc:0.190,ytdInc:0.152},
-    {code:"63",name:"SERV DELI",daily:16802,wtd:78362,ptd:78362,ytd:3557910,wtdInc:0.045,ptdInc:0.045,ytdInc:0.057},
-    {code:"65",name:"PRODUCE",daily:33103,wtd:150997,ptd:150997,ytd:5853459,wtdInc:0.033,ptdInc:0.033,ytdInc:0.072},
-    {code:"53",name:"GASOLINE",daily:122834,wtd:847873,ptd:847873,ytd:23270952,wtdInc:0.470,ptdInc:0.470,ytdInc:0.086},
-    {code:"88",name:"FOOD CT",daily:7190,wtd:30809,ptd:30809,ytd:1339009,wtdInc:0.104,ptdInc:0.104,ytdInc:0.150},
-    {code:"92",name:"PHARM RX",daily:33875,wtd:285347,ptd:285347,ytd:9707775,wtdInc:0.494,ptdInc:0.494,ytdInc:0.261},
-    {code:"93",name:"PHARM OTC",daily:17909,wtd:102110,ptd:102110,ytd:4452389,wtdInc:0.058,ptdInc:0.058,ytdInc:0.037},
-    {code:"94",name:"OPTICAL",daily:5740,wtd:52268,ptd:52268,ytd:2190834,wtdInc:-0.046,ptdInc:-0.046,ytdInc:0.104},
-    {code:"96",name:"HEAR AIDS",daily:3406,wtd:21206,ptd:21206,ytd:878438,wtdInc:-0.087,ptdInc:-0.087,ytdInc:0.019}
-  ],
-  fresh:{
-    meat:{
-      sales:{ty:997479,ly:878313,budget:949209,varLY:13.57,varBudget:5.09}, ytdSales:{ty:8714311,ly:7601000,varLY:14.70},
-      flow:{ty:123501,pct:12.38}, margin:{ty:110234,pct:11.05,varLY:21.62}, payroll:{ty:-59004,pct:-5.92},
-      shrink:{ty:6772,pct:0.68}, reprocess:{ty:-32403,pct:-3.25}, dd:{ty:-9065,pct:-0.91},
-      netMargin:{ty:51229,pct:5.14,varLY:74.32},
-      topItems:[
-        {rank:1,name:"33724 GROUND BEEF",units:4247,sales:25491},
-        {rank:2,name:"33841 CONV B/S BREAST",units:5340,sales:15962},
-        {rank:3,name:"1933764 RASTELLI'S GRASS-FED",units:390,sales:9629},
-        {rank:4,name:"33593 BEEF LOIN NEW YORK STEAK",units:626,sales:9147},
-        {rank:5,name:"44478 BEEF RIBEYE STEAK THIN",units:364,sales:5777},
-        {rank:6,name:"30471 ORG B/S BREAST",units:929,sales:5566},
-        {rank:7,name:"33666 BEEF RIBEYE STEAK",units:329,sales:5207},
-        {rank:8,name:"33712 BEEF CHUCK POT ROAST",units:557,sales:4731},
-        {rank:9,name:"29192 BEEF LOIN TOP SIRLOIN",units:393,sales:4707},
-        {rank:10,name:"62998 BONELESS PORK SHOULDER",units:1498,sales:3729}
-      ]
-    },
-    bakery:{
-      sales:{ty:292442,ly:284371,budget:295155,varLY:2.84,varBudget:-0.92}, ytdSales:{ty:2603769,ly:2260000,varLY:15.20},
-      flow:{ty:142891,pct:48.86}, margin:{ty:130730,pct:44.70,varLY:3.66}, payroll:{ty:-118425,pct:-40.50},
-      shrink:{ty:-3826,pct:-1.31}, dd:{ty:-8291,pct:-2.84}, netMargin:{ty:12305,pct:4.21,varLY:-56.80},
-      topItems:[
-        {rank:1,name:"37295 SPECIAL ORDER WHITE CAKE",units:168,sales:4702},
-        {rank:2,name:"37220 GOURMET CHOC CHUNK",units:356,sales:3556},
-        {rank:3,name:"1991766 BLUEBERRIES + CREAM",units:389,sales:3779},
-        {rank:4,name:"1199652 BUTTER CROISSANT 12 COUNT",units:453,sales:4112},
-        {rank:5,name:"1331732 MINI CHOCOLATE CHIP",units:242,sales:2418},
-        {rank:6,name:"43475 COOKIE TRAY",units:88,sales:2023},
-        {rank:7,name:"40706 TUXEDO CHOCOLATE MOUSSE",units:110,sales:4089},
-        {rank:8,name:"1448382 WHITE CAKE FILLED",units:111,sales:1997},
-        {rank:9,name:"2050249 SWEET AND SALTY COOKIE",units:177,sales:1945},
-        {rank:10,name:"1719747 LEMON BLUEBERRY LOAF",units:210,sales:1828}
-      ]
-    },
-    deli:{
-      sales:{ty:377598,ly:330055,budget:384778,varLY:14.40,varBudget:-1.87}, ytdSales:{ty:3557910,ly:3367000,varLY:5.70},
-      flow:{ty:129181,pct:34.21}, margin:{ty:119158,pct:31.56,varLY:11.27}, payroll:{ty:-101086,pct:-26.77},
-      shrink:{ty:-10849,pct:-2.87}, dd:{ty:-3315,pct:-0.88}, netMargin:{ty:18072,pct:4.79,varLY:45.50},
-      topItems:[
-        {rank:1,name:"87745 ROTISSERIE CHICKEN",units:2006,sales:10010},
-        {rank:2,name:"1446716 GRILLED CHIPOTLE SEASONED",units:559,sales:6702},
-        {rank:3,name:"43240 STUFFED BELL PEPPERS",units:847,sales:4229},
-        {rank:4,name:"16318 BEEF + BROCCOLI",units:588,sales:4112},
-        {rank:5,name:"11910 PORK TENDERLOIN WITH",units:649,sales:3238},
-        {rank:6,name:"10783 CHICKEN SALAD MADE WITH",units:509,sales:3049},
-        {rank:7,name:"12823 BBQ CHICKEN MAC + CHEESE",units:478,sales:2147},
-        {rank:8,name:"27230 GYRO KIT",units:278,sales:1942},
-        {rank:9,name:"1450289 ROTISSERIE CHICKEN",units:141,sales:2255},
-        {rank:10,name:"11748 CHICKEN QUESADILLA KIT",units:374,sales:2239}
-      ]
-    },
-    produce:{
-      sales:{ty:709563,ly:675457,budget:693013,varLY:5.05,varBudget:2.39}, ytdSales:{ty:5853459,ly:5460000,varLY:7.20},
-      flow:{ty:126821,pct:17.87}, margin:{ty:98134,pct:13.83,varLY:-2.81}, payroll:{ty:0,pct:0},
-      shrink:{ty:-34,pct:0}, dd:{ty:-26725,pct:-3.77}, netMargin:{ty:98134,pct:13.83,varLY:-2.81},
-      topItems:[
-        {rank:1,name:"57554 BLUEBERRIES",units:2054,sales:10249},
-        {rank:2,name:"27003 STRAWBERRIES",units:1732,sales:6565},
-        {rank:3,name:"47825 SEEDLESS GREEN GRAPES",units:651,sales:5136},
-        {rank:4,name:"647465 AVOCADOS",units:564,sales:4450},
-        {rank:5,name:"4032 SEEDLESS WATERMELON",units:657,sales:4593},
-        {rank:6,name:"56366 RASPBERRIES",units:1100,sales:4389},
-        {rank:7,name:"519638 ORGANIC BLUEBERRIES",units:333,sales:3660},
-        {rank:8,name:"56222 ORGANIC RASPBERRIES",units:421,sales:3211},
-        {rank:9,name:"702669 BLACKBERRIES",units:954,sales:3211},
-        {rank:10,name:"2585 HYDROPONIC STRAWBERRIES",units:308,sales:3077}
-      ]
-    },
-    foodCourt:{
-      sales:{ty:146817,ly:129466,budget:137450,varLY:13.40,varBudget:6.81}, ytdSales:{ty:1339009,ly:1164000,varLY:15.00},
-      grossMargin:{ty:66037,pct:44.98,varLY:10.87}, payroll:{ty:-41379,pct:-28.18}, benefits:{ty:-24000,pct:-16.35},
-      profit:{ty:-4369,pct:-2.98,varLY:21.97}, ytdProfit:{ty:-14324,pct:-1.09,varLY:-77.05},
-      topItems:[
-        {rank:1,name:"1184862 KIOSK WHOLE PEP. PIZZA",units:531,sales:5283},
-        {rank:2,name:"1935328 KIOSK HOTDOG/SODA COMBO",units:1984,sales:2976},
-        {rank:3,name:"1184748 KIOSK SLICE PEP. PIZZA",units:1447,sales:2880},
-        {rank:4,name:"1184887 KIOSK WHOLE CHEESE PIZZA",units:264,sales:2627},
-        {rank:5,name:"1184753 KIOSK CHICKEN BAKE",units:646,sales:2578},
-        {rank:6,name:"1214898 KIOSK WHOLE CHEESE/PEPP.",units:192,sales:1910},
-        {rank:7,name:"1184757 KIOSK SLICE CHEESE PIZZA",units:941,sales:1873},
-        {rank:8,name:"1794127 KIOSK CHOC CHIP COOKIE",units:665,sales:1656},
-        {rank:9,name:"1929940 KIOSK HOT TURKEY",units:172,sales:1202},
-        {rank:10,name:"1935245 KIOSK 20OZ SODA",units:1505,sales:1189}
-      ]
-    },
-    total:{
-      sales:{ty:2377082,ly:2168195,budget:2322156,varLY:9.63,varBudget:2.37},
-      ytdSales:{ty:20229524,ly:18226028,varLY:10.99},
-      margin:{ty:458255,pct:19.28,varLY:7.87}, payroll:{ty:-278516,pct:-11.72},
-      netMargin:{ty:179740,pct:7.56,varLY:4.95}
-    }
-  },
-  shrink:[
-    {name:"Food & Sundries",ddYtd:156,ddPctYtd:0.0022},
-    {name:"Hardlines",ddYtd:348,ddPctYtd:0.0148},
-    {name:"Softlines",ddYtd:184,ddPctYtd:0.0117},
-    {name:"Produce",ddYtd:275,ddPctYtd:0.0483},
-    {name:"Pharmacy OTC",ddYtd:12,ddPctYtd:0.0027},
-    {name:"Optical",ddYtd:11,ddPctYtd:0.0053},
-    {name:"Total",ddYtd:987,ddPctYtd:0.0080}
-  ],
-  shrinkDetail:[
-    {name:"Tires",ytd:101,ytdPct:0.0614},
-    {name:"Home Furn",ytd:42,ytdPct:0.0421},
-    {name:"Majors",ytd:146,ytdPct:0.0252},
-    {name:"Sports",ytd:26,ytdPct:0.0221},
-    {name:"W Apparel",ytd:55,ytdPct:0.0220},
-    {name:"Toys/Seas",ytd:15,ytdPct:0.0185},
-    {name:"M Apparel",ytd:55,ytdPct:0.0177},
-    {name:"Domestics",ytd:22,ytdPct:0.0166},
-    {name:"Garden",ytd:27,ytdPct:0.0103},
-    {name:"Hardware",ytd:9,ytdPct:0.0033},
-    {name:"HABA",ytd:22,ytdPct:0.0029}
-  ],
-  ancillary:{
-    foodService:{sales:146817,profit:-4369,profitPct:-2.98,ytdSales:1339009,ytdProfit:-14324},
-    optical:{sales:239096,profit:44776,profitPct:18.73,ytdSales:2190834,ytdProfit:360604},
-    hearing:{sales:126045,profit:17732,profitPct:14.07,ytdSales:878438,ytdProfit:28320},
-    pharmRx:{sales:1303932,profit:-80640,profitPct:-6.18,ytdSales:9707775,ytdProfit:-531693},
-    pharmOtc:{sales:468851,profit:94627,profitPct:20.18,ytdSales:4452389,ytdProfit:915343},
-    gasoline:{sales:3776218,profit:361394,profitPct:9.57,ytdSales:23270952,ytdProfit:2474659}
-  }
+const DATA={
+asOfDashboard:"May 17",asOfParis:"May 18",asOfFinancial:"May 13 (P9)",asOfCategories:"May 17",
+sales:{daily:{ty:736445,inc:.0880},wtd:{ty:5192736,inc:.1178},ptd:{ty:5192736,inc:.1178},ytd:{ty:176413597,inc:.0785},merch:{daily:{ty:601828,inc:.0644},wtd:{ty:3718506,inc:.0433},ptd:{ty:3718506,inc:.0433},ytd:{ty:134439582,inc:.0668}},gas:{daily:{ty:108306,inc:.2575},wtd:{ty:956179,inc:.4428},ptd:{ty:956179,inc:.4428},ytd:{ty:23379258,inc:.0863}},traffic:{daily:{ty:3679,inc:.0177},wtd:{ty:25863,inc:.0238},ptd:{ty:25863,inc:.0238},ytd:{ty:944146,inc:.0233}},avgSales:{daily:{ty:184,inc:.0572},wtd:{ty:179,inc:.0573},ptd:{ty:179,inc:.0573},ytd:{ty:174,inc:.0627}}},
+lastWeek:{label:"Mon 5/11 – Sun 5/17",weekly:{totalSales:{plan:5115536,actual:5192736,ly:4645665},merchSales:{plan:3856946,actual:3718506,ly:3564116},gasSales:{plan:833799,actual:956179,ly:662731},ancillary:{plan:490050,actual:518051,ly:418817},hours:{schedule:5907.69,actual:5533.58,ly:5809.02},dollars:{schedule:192000,actual:185824,ly:184009},otHours:{schedule:20,actual:0.40,ly:.58},avgWage:{schedule:32.50,actual:33.58,ly:31.68},pctMerch:{schedule:.0498,actual:.0500,ly:.0516},pctTotal:{schedule:.0375,actual:.0358,ly:.0396}},days:[{dow:"MON",date:"5/11",total:713384},{dow:"TUE",date:"5/12",total:677071},{dow:"WED",date:"5/13",total:703782},{dow:"THU",date:"5/14",total:708288},{dow:"FRI",date:"5/15",total:777464},{dow:"SAT",date:"5/16",total:876303},{dow:"SUN",date:"5/17",total:736445}]},
+lastPeriod:{label:"FY2026 P9 (closed)",sales:{warehouse:{ty:20621742,ly:17890311,budget:19254078,varBudgetPct:7.1,varLYPct:15.27},merch:{ty:14816425,ly:13817401,budget:14744182,varBudgetPct:.49,varLYPct:7.23},gas:{ty:3776218,ly:2543108,budget:2662256,varBudgetPct:41.84,varLYPct:48.49},anc:{ty:2284740,ly:1779724,budget:2092382,varBudgetPct:9.19,varLYPct:28.38}},margin:{merch:{ty:1929467,pct:13.02,varLY:12.12},grossProfit:{ty:2728392,pct:13.23,varLY:15.49}},members:{total:{ty:473071,pct:2.29,varLY:4.37},regular:{ty:301910,pct:1.46,varLY:6.95},exec:{ty:171161,pct:.83,varLY:.11}},expenses:{salaries:{ty:742822,pct:3.6,varLY:6.52},benefits:{ty:430837,pct:2.09,varLY:7.45},workersComp:{ty:14856,pct:.07,varLY:6.52},totalControllables:{ty:1295625,pct:6.28,varLY:.77},totalNonControll:{ty:379250,pct:1.84,varLY:3.18}},profit:{controllable:{ty:1432767,pct:6.95,varLY:33.08},total:{ty:1053517,pct:5.11,varLY:48.57},exGas:{ty:692122,pct:4.11,varLY:58.44},exGasEcom:{ty:607096,pct:3.6,varLY:64.66}}},
+payroll:{pctPlan:.0498,pctActual:.0500,pctVarPlan:2,pctVarLY:-17,hoursSchedule:5945,hoursPlan:5908,hoursActual:5534,hoursVarPlan:-374,hoursIncLY:-.0474,hoursToCut:21,dollarsSchedule:198943,dollarsPlan:192000,dollarsActual:185824,dollarsVarPlan:-6176,dollarsToCut:716,otActual:.90,otSNE:0,avgWage:33.58,productivity:672},
+membership:{daily:{memberIncome:{ty:4122,inc:-.232},goldSignups:{ty:2,inc:-.8333},bizSignups:{ty:0,inc:-1},reactivations:{ty:0,inc:-1},total:{ty:2,inc:-.875},newMemberExecPct:{ty:1,inc:.6},execUpgrades:{ty:10,inc:-.1667},triplePlay:{ty:.5,inc:.6},creditCardApps:{ty:4,inc:-.5},newMemberCCPct:{ty:.5,inc:.6},nmarPct:{ty:1,inc:.6},newMemberEmailPct:{ty:1,inc:0}},wtd:{memberIncome:{ty:37911,inc:-.0183},goldSignups:{ty:55,inc:-.0678},bizSignups:{ty:5,inc:1.5},reactivations:{ty:6,inc:-.5385},total:{ty:66,inc:-.1081},newMemberExecPct:{ty:.7273,inc:.1451},execUpgrades:{ty:77,inc:.10},triplePlay:{ty:.2727,inc:.0622},creditCardApps:{ty:38,inc:-.05},newMemberCCPct:{ty:.2879,inc:-.0317},nmarPct:{ty:.9697,inc:.0872},newMemberEmailPct:{ty:.9848,inc:-.0017}},ptd:{memberIncome:{ty:37911,inc:-.0183},goldSignups:{ty:55,inc:-.0678},bizSignups:{ty:5,inc:1.5},reactivations:{ty:6,inc:-.5385},total:{ty:66,inc:-.1081},newMemberExecPct:{ty:.7273,inc:.1451},execUpgrades:{ty:77,inc:.10},triplePlay:{ty:.2727,inc:.0622},creditCardApps:{ty:38,inc:-.05},newMemberCCPct:{ty:.2879,inc:-.0317},nmarPct:{ty:.9697,inc:.0872},newMemberEmailPct:{ty:.9848,inc:-.0017}},ytd:{memberIncome:{ty:4416329,inc:.0545},goldSignups:{ty:2546,inc:-.1693},bizSignups:{ty:56,inc:-.1111},reactivations:{ty:378,inc:-.2786},total:{ty:2980,inc:-.184},newMemberExecPct:{ty:.553,inc:.0221},execUpgrades:{ty:3311,inc:.1029},triplePlay:{ty:.2124,inc:-.0016},creditCardApps:{ty:1454,inc:-.0484},newMemberCCPct:{ty:.2285,inc:-.0158},nmarPct:{ty:.8701,inc:-.0695},newMemberEmailPct:{ty:.9839,inc:-.0024}},ftpt:{ft:151,ftPct:.5763,pt:102,ptPct:.4237,lpt:9}},
+departments:[
+{code:"11",name:"TOBACCO",daily:120,wtd:592,ptd:592,ytd:16324,wtdInc:.406,ptdInc:.406,ytdInc:.073},
+{code:"12",name:"CANDY",daily:52299,wtd:353322,ptd:353322,ytd:12949698,wtdInc:.096,ptdInc:.096,ytdInc:.089},
+{code:"13",name:"FOOD",daily:54632,wtd:359947,ptd:359947,ytd:14303655,wtdInc:.078,ptdInc:.078,ytdInc:.121},
+{code:"14",name:"SUNDRIES",daily:102512,wtd:668016,ptd:668016,ytd:21647820,wtdInc:.154,ptdInc:.154,ytdInc:.047},
+{code:"16",name:"LIQUOR",daily:11794,wtd:80246,ptd:80246,ytd:2557461,wtdInc:-.023,ptdInc:-.023,ytdInc:-.030},
+{code:"17",name:"COOLER",daily:29082,wtd:181866,ptd:181866,ytd:6953433,wtdInc:-.074,ptdInc:-.074,ytdInc:.010},
+{code:"18",name:"FROZEN FD",daily:37296,wtd:233347,ptd:233347,ytd:8219455,wtdInc:.034,ptdInc:.034,ytdInc:.043},
+{code:"19",name:"DELI",daily:28954,wtd:171059,ptd:171059,ytd:6684225,wtdInc:.031,ptdInc:.031,ytdInc:.049},
+{code:"20",name:"HABA",daily:33527,wtd:204384,ptd:204384,ytd:7877234,wtdInc:.095,ptdInc:.095,ytdInc:.069},
+{code:"22",name:"TIRES",daily:3809,wtd:37476,ptd:37476,ytd:1677128,wtdInc:-.176,ptdInc:-.176,ytdInc:.111},
+{code:"23",name:"HARDWARE",daily:13298,wtd:74659,ptd:74659,ytd:2778507,wtdInc:-.029,ptdInc:-.029,ytdInc:-.008},
+{code:"24",name:"MAJORS",daily:14999,wtd:108144,ptd:108144,ytd:5926980,wtdInc:.018,ptdInc:.018,ytdInc:.260},
+{code:"25",name:"AUTO",daily:1530,wtd:9308,ptd:9308,ytd:438831,wtdInc:-.174,ptdInc:-.174,ytdInc:-.191},
+{code:"26",name:"SPORTS",daily:17109,wtd:76472,ptd:76472,ytd:1254621,wtdInc:-.026,ptdInc:-.026,ytdInc:-.159},
+{code:"27",name:"GARDEN",daily:36614,wtd:168106,ptd:168106,ytd:2817912,wtdInc:.108,ptdInc:.108,ytdInc:.032},
+{code:"28",name:"TOYS/SEAS",daily:3440,wtd:16460,ptd:16460,ytd:851919,wtdInc:.429,ptdInc:.429,ytdInc:-.242},
+{code:"29",name:"STAMPS",daily:156,wtd:2255,ptd:2255,ytd:180658,wtdInc:.033,ptdInc:.033,ytdInc:-.155},
+{code:"31",name:"W APPAREL",daily:11387,wtd:77000,ptd:77000,ytd:2551873,wtdInc:-.177,ptdInc:-.177,ytdInc:-.018},
+{code:"32",name:"HOUSEWRS",daily:3402,wtd:18856,ptd:18856,ytd:800550,wtdInc:-.067,ptdInc:-.067,ytdInc:-.253},
+{code:"33",name:"SM APPL",daily:17672,wtd:87720,ptd:87720,ytd:3536991,wtdInc:.095,ptdInc:.095,ytdInc:-.041},
+{code:"34",name:"DOMESTICS",daily:6223,wtd:30687,ptd:30687,ytd:1337633,wtdInc:-.269,ptdInc:-.269,ytdInc:-.080},
+{code:"35",name:"JEWELRY",daily:180,wtd:11520,ptd:11520,ytd:1955012,wtdInc:-.801,ptdInc:-.801,ytdInc:.015},
+{code:"36",name:"MEDIA",daily:80,wtd:789,ptd:789,ytd:291723,wtdInc:-.528,ptdInc:-.528,ytdInc:.106},
+{code:"38",name:"HOME FURN",daily:1735,wtd:12488,ptd:12488,ytd:1010505,wtdInc:-.120,ptdInc:-.120,ytdInc:-.121},
+{code:"39",name:"M APPAREL",daily:14803,wtd:82896,ptd:82896,ytd:3204975,wtdInc:-.026,ptdInc:-.026,ytdInc:.040},
+{code:"44",name:"SPCL EVNT",daily:2811,wtd:37241,ptd:37241,ytd:717926,wtdInc:7.531,ptdInc:7.531,ytdInc:.713},
+{code:"61",name:"MEAT",daily:42000,wtd:248841,ptd:248841,ytd:8756311,wtdInc:.112,ptdInc:.112,ytdInc:.146},
+{code:"62",name:"BAKERY",daily:9428,wtd:73152,ptd:73152,ytd:2613197,wtdInc:.175,ptdInc:.175,ytdInc:.152},
+{code:"63",name:"SERV DELI",daily:16571,wtd:94933,ptd:94933,ytd:3574483,wtdInc:.058,ptdInc:.058,ytdInc:.057},
+{code:"65",name:"PRODUCE",daily:33827,wtd:184823,ptd:184823,ytd:5887284,wtdInc:.050,ptdInc:.050,ytdInc:.073},
+{code:"53",name:"GASOLINE",daily:108306,wtd:956179,ptd:956179,ytd:23379258,wtdInc:.443,ptdInc:.443,ytdInc:.086},
+{code:"88",name:"FOOD CT",daily:5998,wtd:36807,ptd:36807,ytd:1345008,wtdInc:.114,ptdInc:.114,ytdInc:.150},
+{code:"92",name:"PHARM RX",daily:33875,wtd:285347,ptd:285347,ytd:9707775,wtdInc:.494,ptdInc:.494,ytdInc:.261},
+{code:"93",name:"PHARM OTC",daily:13988,wtd:116097,ptd:116097,ytd:4466377,wtdInc:.022,ptdInc:.022,ytdInc:.037},
+{code:"94",name:"OPTICAL",daily:4678,wtd:56946,ptd:56946,ytd:2195512,wtdInc:-.014,ptdInc:-.014,ytdInc:.104},
+{code:"96",name:"HEAR AIDS",daily:1648,wtd:22854,ptd:22854,ytd:880086,wtdInc:-.023,ptdInc:-.023,ytdInc:.020}
+],
+// CATEGORIES — simplified: Sales, % vs LY, On Hand only
+categories:{
+"Food & Sundries":[
+{n:"Candy (Dept 12)",wtd:353322,wtdI:.096,ytd:12949698,ytdI:.089,oh:1099},
+{n:"  Nuts",wtd:55755,wtdI:.097,ytd:2035778,ytdI:.097,oh:166},
+{n:"  Paper Products",wtd:0,wtdI:0,ytd:0,ytdI:0,oh:0},
+{n:"  Salty Snacks",wtd:80246,wtdI:.046,ytd:2482251,ytdI:.184,oh:139},
+{n:"  Cookies & Crackers",wtd:31385,wtdI:.121,ytd:1110586,ytdI:.074,oh:43},
+{n:"  Bars",wtd:54681,wtdI:.052,ytd:1671702,ytdI:.094,oh:34},
+{n:"  Meat Snacks",wtd:25525,wtdI:.500,ytd:879310,ytdI:.094,oh:38},
+{n:"  Bulk Candy",wtd:25470,wtdI:.064,ytd:824192,ytdI:.087,oh:32},
+{n:"  Healthy Snacking",wtd:8637,wtdI:.111,ytd:683720,ytdI:.058,oh:179},
+{n:"  Fruit Snacks",wtd:23344,wtdI:.157,ytd:580826,ytdI:.072,oh:14},
+{n:"  Seasonal Candy",wtd:759,wtdI:0,ytd:447929,ytdI:.142,oh:101},
+{n:"  Mints & Gum",wtd:2901,wtdI:.213,ytd:105068,ytdI:.166,oh:18},
+{n:"Food (Dept 13)",wtd:359947,wtdI:.078,ytd:14303655,ytdI:.121,oh:1223},
+{n:"  Beverages",wtd:32927,wtdI:.122,ytd:1067563,ytdI:.224,oh:128},
+{n:"  Coffee & Sweeteners",wtd:35103,wtdI:.378,ytd:1188725,ytdI:.273,oh:80},
+{n:"  Bread",wtd:38388,wtdI:.060,ytd:1158016,ytdI:.119,oh:131},
+{n:"  Fruit & Vegetables (Dry)",wtd:33015,wtdI:.105,ytd:1152552,ytdI:.124,oh:33},
+{n:"  Oils Mayo Dressing",wtd:35085,wtdI:.064,ytd:1208392,ytdI:.178,oh:62},
+{n:"  Spreads Syrups Honey",wtd:25441,wtdI:.137,ytd:828766,ytdI:.139,oh:48},
+{n:"  Flour Sugar Baking",wtd:23811,wtdI:.044,ytd:939932,ytdI:.057,oh:90},
+{n:"  Cereal",wtd:21370,wtdI:.158,ytd:591223,ytdI:.108,oh:19},
+{n:"  Condiments",wtd:18408,wtdI:.045,ytd:585041,ytdI:.124,oh:18},
+{n:"  Desserts (Dry)",wtd:16187,wtdI:.250,ytd:473736,ytdI:.179,oh:9},
+{n:"  Prepared Foods",wtd:14005,wtdI:.135,ytd:446156,ytdI:.082,oh:13},
+{n:"  Canned Fish & Meat",wtd:12921,wtdI:.110,ytd:590757,ytdI:.090,oh:42},
+{n:"  Spices",wtd:11944,wtdI:.094,ytd:521144,ytdI:.088,oh:21},
+{n:"  Rice Beans Pasta",wtd:11122,wtdI:.061,ytd:410390,ytdI:.151,oh:48},
+{n:"  Soups",wtd:8954,wtdI:.122,ytd:330384,ytdI:.157,oh:8},
+{n:"  Sauces",wtd:7510,wtdI:.124,ytd:265941,ytdI:.172,oh:13},
+{n:"Sundries (Dept 14)",wtd:566895,wtdI:.169,ytd:21528762,ytdI:.050,oh:1154},
+{n:"  Pet Supplies",wtd:80007,wtdI:.137,ytd:3232997,ytdI:.059,oh:264},
+{n:"  Cleaning",wtd:78739,wtdI:.231,ytd:2832969,ytdI:.074,oh:155},
+{n:"  Paper Products",wtd:141810,wtdI:.198,ytd:5863830,ytdI:.025,oh:266},
+{n:"  Detergent",wtd:43122,wtdI:.353,ytd:1444658,ytdI:.051,oh:64},
+{n:"  Hardware (in Sundries)",wtd:26648,wtdI:.346,ytd:1022927,ytdI:.075,oh:42},
+{n:"  Bags",wtd:23241,wtdI:.066,ytd:901779,ytdI:.067,oh:31},
+{n:"  Foam & Catering",wtd:18852,wtdI:.300,ytd:554180,ytdI:.146,oh:33},
+{n:"Liquor (Dept 16)",wtd:80246,wtdI:-.023,ytd:2557461,ytdI:-.030,oh:163},
+{n:"  Beer",wtd:0,wtdI:0,ytd:0,ytdI:0,oh:0},
+{n:"  Vodka",wtd:0,wtdI:0,ytd:0,ytdI:0,oh:0},
+{n:"  Whisky",wtd:0,wtdI:0,ytd:0,ytdI:0,oh:0},
+{n:"  Fine Wine",wtd:0,wtdI:0,ytd:0,ytdI:0,oh:0},
+{n:"Cooler (Dept 17)",wtd:181866,wtdI:-.074,ytd:6953433,ytdI:.010,oh:507},
+{n:"  Dairy Products",wtd:101300,wtdI:0,ytd:3027000,ytdI:.115,oh:445},
+{n:"  Cooler Meats",wtd:33000,wtdI:0,ytd:1162000,ytdI:.057,oh:25},
+{n:"  Cultured",wtd:30350,wtdI:0,ytd:1164000,ytdI:.043,oh:95},
+{n:"Frozen Food (Dept 18)",wtd:233347,wtdI:.034,ytd:8219455,ytdI:.043,oh:0},
+{n:"  Frozen Prepared",wtd:74000,wtdI:0,ytd:3030000,ytdI:.100,oh:250},
+{n:"  Frozen Meat Protein",wtd:58000,wtdI:0,ytd:2135000,ytdI:.111,oh:185},
+{n:"  Frozen Ethnic",wtd:39000,wtdI:0,ytd:1170000,ytdI:.146,oh:145},
+{n:"  Frozen Desserts",wtd:27000,wtdI:0,ytd:862000,ytdI:.093,oh:50},
+{n:"  Frozen Seafood",wtd:22000,wtdI:0,ytd:888000,ytdI:.206,oh:50},
+{n:"Deli (Dept 19)",wtd:171059,wtdI:.031,ytd:6684225,ytdI:.049,oh:384},
+{n:"  Cheese",wtd:128500,wtdI:0,ytd:4810000,ytdI:.046,oh:303},
+{n:"  Deli Meats",wtd:17500,wtdI:0,ytd:545000,ytdI:.045,oh:51},
+{n:"  Pasta & Salads",wtd:14000,wtdI:0,ytd:484000,ytdI:.046,oh:22}
+],
+"Hardlines":[
+{n:"HABA (Dept 20)",wtd:204384,wtdI:.095,ytd:7877234,ytdI:.069,oh:1376},
+{n:"  Hanging Apparel (HABA)",wtd:65000,wtdI:0,ytd:2490000,ytdI:.071,oh:230},
+{n:"  Protein Drinks",wtd:21000,wtdI:0,ytd:825000,ytdI:.088,oh:78},
+{n:"  Feminine Hygiene",wtd:13500,wtdI:0,ytd:447000,ytdI:.073,oh:30},
+{n:"  Hair Care",wtd:9300,wtdI:0,ytd:330000,ytdI:.075,oh:18},
+{n:"  Skincare",wtd:8500,wtdI:0,ytd:319000,ytdI:.102,oh:24},
+{n:"  Body Care",wtd:7700,wtdI:0,ytd:243000,ytdI:.092,oh:25},
+{n:"  Formula",wtd:6200,wtdI:0,ytd:215000,ytdI:-.100,oh:9},
+{n:"Tires (Dept 22)",wtd:37476,wtdI:-.176,ytd:1677128,ytdI:.111,oh:46},
+{n:"Hardware (Dept 23)",wtd:74659,wtdI:-.029,ytd:2778507,ytdI:-.008,oh:283},
+{n:"  Batteries",wtd:17000,wtdI:0,ytd:790000,ytdI:.080,oh:44},
+{n:"  Power Equipment",wtd:17000,wtdI:0,ytd:161000,ytdI:.164,oh:60},
+{n:"  Storage",wtd:16000,wtdI:0,ytd:497000,ytdI:.274,oh:34},
+{n:"  Lighting & Electrical",wtd:4000,wtdI:0,ytd:111000,ytdI:-.435,oh:27},
+{n:"Majors (Dept 24)",wtd:108144,wtdI:.018,ytd:5926980,ytdI:.677,oh:548},
+{n:"  TVs",wtd:25000,wtdI:0,ytd:1265000,ytdI:-.128,oh:153},
+{n:"  Wireless Phones",wtd:23000,wtdI:0,ytd:0,ytdI:0,oh:0},
+{n:"  Computers",wtd:16000,wtdI:0,ytd:345000,ytdI:.904,oh:920},
+{n:"  Apple",wtd:11000,wtdI:0,ytd:218000,ytdI:.124,oh:2},
+{n:"  Audio",wtd:11000,wtdI:0,ytd:316000,ytdI:.890,oh:35},
+{n:"Auto (Dept 25)",wtd:9308,wtdI:-.174,ytd:438831,ytdI:-.191,oh:101},
+{n:"Sports (Dept 26)",wtd:76472,wtdI:-.026,ytd:1254621,ytdI:-.159,oh:413},
+{n:"  Camping",wtd:20000,wtdI:0,ytd:68000,ytdI:0,oh:35},
+{n:"  Spas/Pools",wtd:16000,wtdI:0,ytd:80000,ytdI:0,oh:38},
+{n:"  Coolers",wtd:6000,wtdI:0,ytd:42000,ytdI:0,oh:53},
+{n:"  Golf",wtd:5000,wtdI:0,ytd:114000,ytdI:0,oh:13},
+{n:"  Exercise",wtd:2500,wtdI:.631,ytd:25000,ytdI:.725,oh:11},
+{n:"Garden (Dept 27)",wtd:168106,wtdI:.108,ytd:2817912,ytdI:.032,oh:265},
+{n:"  Live Goods",wtd:45000,wtdI:0,ytd:40000,ytdI:0,oh:0},
+{n:"  Patio",wtd:20000,wtdI:0,ytd:140000,ytdI:.082,oh:138},
+{n:"  Soil & Potting",wtd:11000,wtdI:0,ytd:795000,ytdI:.475,oh:24},
+{n:"  Chemical",wtd:8500,wtdI:0,ytd:265000,ytdI:.082,oh:7225},
+{n:"  Pots",wtd:7500,wtdI:0,ytd:65000,ytdI:.532,oh:0},
+{n:"  Cut Flowers",wtd:7000,wtdI:0,ytd:38000,ytdI:.527,oh:0},
+{n:"  BBQ",wtd:6000,wtdI:0,ytd:1005000,ytdI:.161,oh:0},
+{n:"  Pest",wtd:4500,wtdI:0,ytd:103000,ytdI:0,oh:267},
+{n:"Toys/Seas (Dept 28)",wtd:16460,wtdI:.429,ytd:851919,ytdI:-.242,oh:33},
+{n:"Stamps (Dept 29)",wtd:2255,wtdI:.033,ytd:180658,ytdI:-.155,oh:78}
+],
+"Softlines":[
+{n:"W Apparel (Dept 31)",wtd:77000,wtdI:-.177,ytd:2551873,ytdI:-.018,oh:1037},
+{n:"  Hanging Apparel (W)",wtd:65000,wtdI:0,ytd:1900000,ytdI:.071,oh:240},
+{n:"  Sleeping Needs",wtd:9000,wtdI:0,ytd:332000,ytdI:0,oh:230},
+{n:"Housewares (Dept 32)",wtd:18856,wtdI:-.067,ytd:800550,ytdI:-.253,oh:88},
+{n:"  Pantryware",wtd:5500,wtdI:0,ytd:25000,ytdI:.068,oh:0},
+{n:"  Water Filtration",wtd:4000,wtdI:0,ytd:54000,ytdI:.513,oh:14},
+{n:"Small Appl (Dept 33)",wtd:87720,wtdI:.095,ytd:3536991,ytdI:-.041,oh:158},
+{n:"  Air",wtd:16000,wtdI:0,ytd:65000,ytdI:.078,oh:1},
+{n:"  Razors",wtd:15000,wtdI:0,ytd:91000,ytdI:.139,oh:1},
+{n:"  Coffee Pods",wtd:10000,wtdI:.7,ytd:155000,ytdI:.345,oh:0},
+{n:"  Coffee Makers",wtd:13000,wtdI:0,ytd:512000,ytdI:.513,oh:14},
+{n:"  Floor Care",wtd:8500,wtdI:0,ytd:153000,ytdI:.6,oh:1},
+{n:"  Garment Care",wtd:8500,wtdI:0,ytd:14000,ytdI:.712,oh:0},
+{n:"  Oral Care",wtd:8500,wtdI:0,ytd:60000,ytdI:0,oh:0},
+{n:"Domestics (Dept 34)",wtd:30687,wtdI:-.269,ytd:1337633,ytdI:-.080,oh:79},
+{n:"  Rugs",wtd:9000,wtdI:0,ytd:158000,ytdI:.009,oh:0},
+{n:"  Sheets",wtd:6500,wtdI:0,ytd:152000,ytdI:.583,oh:1},
+{n:"  Beach Towels",wtd:6000,wtdI:0,ytd:428000,ytdI:.009,oh:0},
+{n:"Jewelry (Dept 35)",wtd:11520,wtdI:-.801,ytd:1955012,ytdI:.015,oh:50},
+{n:"Media (Dept 36)",wtd:789,wtdI:-.528,ytd:291723,ytdI:.106,oh:69},
+{n:"Home Furn (Dept 38)",wtd:12488,wtdI:-.120,ytd:1010505,ytdI:-.121,oh:280},
+{n:"  Mattresses",wtd:7500,wtdI:0,ytd:236000,ytdI:.114,oh:0},
+{n:"M Apparel (Dept 39)",wtd:82896,wtdI:-.026,ytd:3204975,ytdI:.040,oh:1088},
+{n:"  Hanging Apparel (M)",wtd:60000,wtdI:0,ytd:1990000,ytdI:.102,oh:130},
+{n:"  Childrens Apparel",wtd:13000,wtdI:0,ytd:412000,ytdI:0,oh:7},
+{n:"  Mens Basics",wtd:10000,wtdI:0,ytd:300000,ytdI:0,oh:42},
+{n:"Spcl Event (Dept 44)",wtd:37241,wtdI:7.531,ytd:717926,ytdI:.713,oh:0}
+],
+"Fresh":[
+{n:"Meat (Dept 61)",wtd:248841,wtdI:.112,ytd:8756311,ytdI:.146,oh:0},
+{n:"  Conventional Beef",wtd:53000,wtdI:0,ytd:1910000,ytdI:.080,oh:0},
+{n:"  Conventional Chicken",wtd:37000,wtdI:0,ytd:1232000,ytdI:.097,oh:0},
+{n:"  Pork Program",wtd:22000,wtdI:0,ytd:860000,ytdI:0,oh:0},
+{n:"  Seafood",wtd:13500,wtdI:0,ytd:705000,ytdI:0,oh:0},
+{n:"  Organic Chicken",wtd:9700,wtdI:0,ytd:320000,ytdI:.059,oh:0},
+{n:"  Lamb Program",wtd:8000,wtdI:0,ytd:174000,ytdI:0,oh:0},
+{n:"  Fresh Atlantic Salmon",wtd:6000,wtdI:0,ytd:294000,ytdI:0,oh:0},
+{n:"  Conventional Turkey",wtd:4500,wtdI:0,ytd:199000,ytdI:.215,oh:0},
+{n:"Bakery (Dept 62)",wtd:73152,wtdI:.175,ytd:2613197,ytdI:.152,oh:0},
+{n:"  Cakes",wtd:25000,wtdI:0,ytd:724000,ytdI:0,oh:0},
+{n:"  Cookies",wtd:15000,wtdI:0,ytd:487000,ytdI:0,oh:0},
+{n:"  Muffins",wtd:11000,wtdI:0,ytd:434000,ytdI:0,oh:0},
+{n:"  Breads (Artisan)",wtd:11000,wtdI:0,ytd:455000,ytdI:0,oh:0},
+{n:"  Pastries",wtd:8000,wtdI:0,ytd:249000,ytdI:0,oh:0},
+{n:"Service Deli (Dept 63)",wtd:94933,wtdI:.058,ytd:3574483,ytdI:.057,oh:0},
+{n:"  Hot Entree",wtd:34000,wtdI:0,ytd:1145000,ytdI:0,oh:0},
+{n:"  Cold Entree",wtd:16500,wtdI:0,ytd:594000,ytdI:0,oh:0},
+{n:"  Stuffed Bell Peppers",wtd:6500,wtdI:0,ytd:206000,ytdI:0,oh:0},
+{n:"  Chicken Street Taco Kit",wtd:4500,wtdI:0,ytd:189000,ytdI:0,oh:0},
+{n:"  Shrimp Cocktail",wtd:4300,wtdI:0,ytd:152000,ytdI:0,oh:0},
+{n:"Produce (Dept 65)",wtd:184823,wtdI:.050,ytd:5887284,ytdI:.073,oh:52},
+{n:"  Berries",wtd:41000,wtdI:0,ytd:1300000,ytdI:0,oh:0},
+{n:"  Blueberries",wtd:28500,wtdI:0,ytd:1293000,ytdI:0,oh:0},
+{n:"  Hothouse",wtd:20000,wtdI:0,ytd:532000,ytdI:0,oh:0},
+{n:"  Vegetables",wtd:15000,wtdI:0,ytd:584000,ytdI:0,oh:0},
+{n:"  Grapes",wtd:13700,wtdI:0,ytd:542000,ytdI:0,oh:0},
+{n:"  Apples",wtd:9700,wtdI:.083,ytd:228000,ytdI:.509,oh:0},
+{n:"  Leafy Greens & Herbs",wtd:9800,wtdI:0,ytd:326000,ytdI:0,oh:0},
+{n:"  Raspberries",wtd:8500,wtdI:0,ytd:284000,ytdI:0,oh:0},
+{n:"  Potatoes",wtd:7100,wtdI:0,ytd:227000,ytdI:0,oh:0}
+],
+"Other Bus":[
+{n:"Gasoline (Dept 53)",wtd:956179,wtdI:.443,ytd:23379258,ytdI:.086,oh:0},
+{n:"  Regular Gas",wtd:855000,wtdI:.443,ytd:0,ytdI:0,oh:0},
+{n:"  Premium Gas",wtd:101000,wtdI:.443,ytd:1443000,ytdI:.073,oh:0},
+{n:"Food Court (Dept 88)",wtd:36807,wtdI:.114,ytd:1345008,ytdI:.150,oh:0},
+{n:"Pharm Rx (Dept 92)",wtd:285347,wtdI:.494,ytd:9707775,ytdI:.261,oh:6107},
+{n:"Pharm OTC (Dept 93)",wtd:116097,wtdI:.022,ytd:4466377,ytdI:.037,oh:35},
+{n:"  Vitamins & Supplements",wtd:36000,wtdI:0,ytd:0,ytdI:0,oh:0},
+{n:"  Cold/Cough/Allergy",wtd:28000,wtdI:0,ytd:0,ytdI:0,oh:0},
+{n:"  Pain Care",wtd:10500,wtdI:0,ytd:0,ytdI:0,oh:0},
+{n:"  Health Care",wtd:7000,wtdI:0,ytd:0,ytdI:0,oh:0},
+{n:"Optical (Dept 94)",wtd:56946,wtdI:-.014,ytd:2195512,ytdI:.104,oh:62},
+{n:"Hearing Aids (Dept 96)",wtd:22854,wtdI:-.023,ytd:880086,ytdI:.020,oh:53}
+]
+},
+fresh:{
+meat:{sales:{ty:997479,ly:878313,budget:949209,varLY:13.57,varBudget:5.09},ytdSales:{ty:8756311,ly:7610000,varLY:14.6},flow:{ty:123501,pct:12.38},margin:{ty:110234,pct:11.05,varLY:21.62},payroll:{ty:-59004,pct:-5.92},shrink:{ty:6772,pct:.68},reprocess:{ty:-32403,pct:-3.25},dd:{ty:-9065,pct:-.91},netMargin:{ty:51229,pct:5.14,varLY:74.32},topItems:[{rank:1,name:"33724 GROUND BEEF",units:5064,sales:30410},{rank:2,name:"33841 CONV B/S BREAST",units:5394,sales:16131},{rank:3,name:"1933764 RASTELLI'S GRASS-FED",units:481,sales:11873},{rank:4,name:"33593 BEEF LOIN NEW YORK STEAK",units:739,sales:10732},{rank:5,name:"44478 BEEF RIBEYE STEAK THIN",units:462,sales:7250},{rank:6,name:"33666 BEEF RIBEYE STEAK",units:442,sales:6905},{rank:7,name:"30471 ORG B/S BREAST",units:929,sales:5566},{rank:8,name:"33712 BEEF CHUCK POT ROAST",units:626,sales:4729},{rank:9,name:"29192 BEEF LOIN TOP SIRLOIN",units:393,sales:4707},{rank:10,name:"33625 BEEF CHUCK ROAST",units:174,sales:4542}]},
+bakery:{sales:{ty:292442,ly:284371,budget:295155,varLY:2.84,varBudget:-.92},ytdSales:{ty:2613197,ly:2266000,varLY:15.20},flow:{ty:142891,pct:48.86},margin:{ty:130730,pct:44.70,varLY:3.66},payroll:{ty:-118425,pct:-40.50},shrink:{ty:-3826,pct:-1.31},dd:{ty:-8291,pct:-2.84},netMargin:{ty:12305,pct:4.21,varLY:-56.80},topItems:[{rank:1,name:"37295 SPECIAL ORDER WHITE CAKE",units:185,sales:5178},{rank:2,name:"37220 GOURMET CHOC CHUNK",units:418,sales:4176},{rank:3,name:"1991766 BLUEBERRIES + CREAM",units:454,sales:4376},{rank:4,name:"1199652 BUTTER CROISSANT 12 COUNT",units:542,sales:5194},{rank:5,name:"1331732 MINI CHOCOLATE CHIP",units:284,sales:2837},{rank:6,name:"40706 TUXEDO CHOCOLATE MOUSSE",units:103,sales:3760},{rank:7,name:"43475 COOKIE TRAY",units:80,sales:1839},{rank:8,name:"1448382 WHITE CAKE FILLED",units:123,sales:2213},{rank:9,name:"2050249 SWEET AND SALTY COOKIE",units:202,sales:2257},{rank:10,name:"1719747 LEMON BLUEBERRY LOAF",units:242,sales:2104}]},
+deli:{sales:{ty:377598,ly:330055,budget:384778,varLY:14.40,varBudget:-1.87},ytdSales:{ty:3574483,ly:3380000,varLY:5.75},flow:{ty:129181,pct:34.21},margin:{ty:119158,pct:31.56,varLY:11.27},payroll:{ty:-101086,pct:-26.77},shrink:{ty:-10849,pct:-2.87},dd:{ty:-3315,pct:-.88},netMargin:{ty:18072,pct:4.79,varLY:45.50},topItems:[{rank:1,name:"87745 ROTISSERIE CHICKEN",units:2327,sales:11611},{rank:2,name:"1446716 GRILLED CHIPOTLE SEASONED",units:697,sales:8358},{rank:3,name:"43240 STUFFED BELL PEPPERS",units:1020,sales:5085},{rank:4,name:"42940 STUFFED BELL PEPPERS",units:863,sales:4309},{rank:5,name:"11910 PORK TENDERLOIN WITH",units:649,sales:3238},{rank:6,name:"10783 CHICKEN SALAD MADE WITH",units:509,sales:3049},{rank:7,name:"12823 BBQ CHICKEN MAC + CHEESE",units:598,sales:3585},{rank:8,name:"27230 GYRO KIT",units:557,sales:2503},{rank:9,name:"11748 CHICKEN QUESADILLA KIT",units:374,sales:2239},{rank:10,name:"16318 BEEF + BROCCOLI",units:628,sales:4540}]},
+produce:{sales:{ty:709563,ly:675457,budget:693013,varLY:5.05,varBudget:2.39},ytdSales:{ty:5887284,ly:5485000,varLY:7.33},flow:{ty:126821,pct:17.87},margin:{ty:98134,pct:13.83,varLY:-2.81},payroll:{ty:0,pct:0},shrink:{ty:-34,pct:0},dd:{ty:-26725,pct:-3.77},netMargin:{ty:98134,pct:13.83,varLY:-2.81},topItems:[{rank:1,name:"57554 BLUEBERRIES",units:2454,sales:12169},{rank:2,name:"27003 STRAWBERRIES",units:2095,sales:8083},{rank:3,name:"47825 SEEDLESS GREEN GRAPES",units:776,sales:6133},{rank:4,name:"647465 AVOCADOS",units:679,sales:5354},{rank:5,name:"4032 SEEDLESS WATERMELON",units:776,sales:5476},{rank:6,name:"56366 RASPBERRIES",units:1342,sales:5354},{rank:7,name:"519638 ORGANIC BLUEBERRIES",units:387,sales:4258},{rank:8,name:"56222 ORGANIC RASPBERRIES",units:482,sales:3676},{rank:9,name:"702669 BLACKBERRIES",units:1098,sales:3695},{rank:10,name:"2585 HYDROPONIC STRAWBERRIES",units:359,sales:3585}]},
+foodCourt:{sales:{ty:146817,ly:129466,budget:137450,varLY:13.40,varBudget:6.81},ytdSales:{ty:1345008,ly:1170000,varLY:14.96},grossMargin:{ty:66037,pct:44.98,varLY:10.87},payroll:{ty:-41379,pct:-28.18},benefits:{ty:-24000,pct:-16.35},profit:{ty:-4369,pct:-2.98,varLY:21.97},ytdProfit:{ty:-14324,pct:-1.09,varLY:-77.05},topItems:[{rank:1,name:"1184862 KIOSK WHOLE PEP. PIZZA",units:622,sales:6189},{rank:2,name:"1935328 KIOSK HOTDOG/SODA COMBO",units:2359,sales:3539},{rank:3,name:"1184748 KIOSK SLICE PEP. PIZZA",units:1686,sales:3355},{rank:4,name:"1184887 KIOSK WHOLE CHEESE PIZZA",units:330,sales:3284},{rank:5,name:"1184753 KIOSK CHICKEN BAKE",units:765,sales:3052},{rank:6,name:"1214898 KIOSK WHOLE CHEESE/PEPP.",units:223,sales:2219},{rank:7,name:"1184757 KIOSK SLICE CHEESE PIZZA",units:1101,sales:2191},{rank:8,name:"1794127 KIOSK CHOC CHIP COOKIE",units:777,sales:1935},{rank:9,name:"1929940 KIOSK HOT TURKEY",units:200,sales:1398},{rank:10,name:"1935245 KIOSK 20OZ SODA",units:1791,sales:1415}]},
+total:{sales:{ty:2523891,ly:2297662,budget:2459605,varLY:9.85,varBudget:2.61},ytdSales:{ty:20330000,ly:18370000,varLY:10.67},margin:{ty:458255,pct:19.28,varLY:7.87},payroll:{ty:-278516,pct:-11.72},netMargin:{ty:179740,pct:7.56,varLY:4.95}}
+},
+shrink:[{name:"Food & Sundries",ddYtd:156,ddPctYtd:.0022},{name:"Hardlines",ddYtd:348,ddPctYtd:.0148},{name:"Softlines",ddYtd:184,ddPctYtd:.0117},{name:"Produce",ddYtd:275,ddPctYtd:.0483},{name:"Pharmacy OTC",ddYtd:12,ddPctYtd:.0027},{name:"Optical",ddYtd:11,ddPctYtd:.0053},{name:"Total",ddYtd:987,ddPctYtd:.008}],
+shrinkDetail:[{name:"Tires",ytd:101,ytdPct:.0614},{name:"Home Furn",ytd:42,ytdPct:.0421},{name:"Majors",ytd:146,ytdPct:.0252},{name:"Sports",ytd:26,ytdPct:.0221},{name:"W Apparel",ytd:55,ytdPct:.022},{name:"Toys/Seas",ytd:15,ytdPct:.0185},{name:"M Apparel",ytd:55,ytdPct:.0177},{name:"Domestics",ytd:22,ytdPct:.0166},{name:"Garden",ytd:27,ytdPct:.0103},{name:"Hardware",ytd:9,ytdPct:.0033},{name:"HABA",ytd:22,ytdPct:.0029}],
+ancillary:{foodService:{sales:146817,profit:-4369,profitPct:-2.98,ytdSales:1345008,ytdProfit:-14324},optical:{sales:239096,profit:44776,profitPct:18.73,ytdSales:2195512,ytdProfit:360604},hearing:{sales:126045,profit:17732,profitPct:14.07,ytdSales:880086,ytdProfit:28320},pharmRx:{sales:1303932,profit:-80640,profitPct:-6.18,ytdSales:9707775,ytdProfit:-531693},pharmOtc:{sales:468851,profit:94627,profitPct:20.18,ytdSales:4466377,ytdProfit:915343},gasoline:{sales:3776218,profit:361394,profitPct:9.57,ytdSales:23379258,ytdProfit:2474659}}
 };
 
-const fmt$ = n => { if(n==null||isNaN(n))return "—"; const a=Math.abs(n),s=n<0?"-":""; if(a>=1e6)return s+"$"+(a/1e6).toFixed(2)+"M"; if(a>=1e3)return s+"$"+(a/1e3).toFixed(1)+"K"; return s+"$"+Math.round(a).toLocaleString(); };
-const fmt$full = n => { if(n==null||isNaN(n))return "—"; return (n<0?"-":"")+"$"+Math.abs(Math.round(n)).toLocaleString(); };
-const fmtN = (n,dec=0) => { if(n==null||isNaN(n))return "—"; return Number(n).toLocaleString(undefined,{minimumFractionDigits:dec,maximumFractionDigits:dec}); };
-const fmtPct = (n,dec=1) => { if(n==null||isNaN(n))return "—"; return (n*100).toFixed(dec)+"%"; };
-const fmtPctRaw = (n,dec=1) => { if(n==null||isNaN(n))return "—"; return Number(n).toFixed(dec)+"%"; };
-const deltaClass = (n,inv=false) => { if(n===0||n==null)return ""; return (inv?n<0:n>0)?"delta-pos":"delta-neg"; };
-const arrow = n => n>0?"▲":n<0?"▼":"·";
+const fmt$=n=>{if(n==null||isNaN(n))return"—";const a=Math.abs(n),s=n<0?"-":"";if(a>=1e6)return s+"$"+(a/1e6).toFixed(2)+"M";if(a>=1e3)return s+"$"+(a/1e3).toFixed(1)+"K";return s+"$"+Math.round(a).toLocaleString()};
+const fmt$full=n=>{if(n==null||isNaN(n))return"—";return(n<0?"-":"")+"$"+Math.abs(Math.round(n)).toLocaleString()};
+const fmtN=(n,dec=0)=>{if(n==null||isNaN(n))return"—";return Number(n).toLocaleString(undefined,{minimumFractionDigits:dec,maximumFractionDigits:dec})};
+const fmtPct=(n,dec=1)=>{if(n==null||isNaN(n))return"—";return(n*100).toFixed(dec)+"%"};
+const fmtPctRaw=(n,dec=1)=>{if(n==null||isNaN(n))return"—";return Number(n).toFixed(dec)+"%"};
+const deltaClass=(n,inv=false)=>{if(n===0||n==null)return"";return(inv?n<0:n>0)?"delta-pos":"delta-neg"};
+const arrow=n=>n>0?"▲":n<0?"▼":"·";
 
-function panelTitle(p) { return ({sales:"Sales",lastweek:"Last Week",lastperiod:"Last Period (P9)",payroll:"Payroll",membership:"Membership",depts:"Departments",fresh:"Fresh",shrink:"Shrink & D&D",ancillary:"Ancillary"})[p]||""; }
-function renderPanel(name) { document.getElementById("panelTitle").textContent = panelTitle(name); document.getElementById("panelBody").innerHTML = panelHTML[name](); document.getElementById("panelBody").scrollTop = 0; }
+function panelTitle(p){return({sales:"Sales",lastweek:"Last Week",lastperiod:"Last Period (P9)",payroll:"Payroll",membership:"Membership",depts:"Departments",categories:"Categories",fresh:"Fresh",shrink:"Shrink & D&D",ancillary:"Ancillary"})[p]||""}
+function renderPanel(name){document.getElementById("panelTitle").textContent=panelTitle(name);document.getElementById("panelBody").innerHTML=panelHTML[name]();document.getElementById("panelBody").scrollTop=0}
 
-const panelHTML = {
-  sales: () => {
-    const s = DATA.sales;
-    const quad = (obj,label) => `<div class="section-label">${label}</div><div class="quad">${["daily","wtd","ptd","ytd"].map(k=>`<div class="quad-cell"><div class="quad-label">${k==="daily"?"Yesterday":k==="wtd"?"Running Wk":k.toUpperCase()}</div><div class="quad-val">${fmt$(obj[k].ty)}</div><div class="quad-sub ${deltaClass(obj[k].inc)}">${arrow(obj[k].inc)} ${fmtPct(obj[k].inc)}</div></div>`).join("")}</div>`;
-    return quad({daily:s.daily,wtd:s.wtd,ptd:s.ptd,ytd:s.ytd},"Total Sales") + quad(s.merch,"Merch Sales") + quad(s.gas,"Gas Sales") + `
-      <div class="section-label">Traffic & Avg Sale</div>
-      <div class="stat-card">
-        <div class="stat-row"><div class="stat-name"><strong>Traffic Yesterday</strong></div><div class="stat-val">${fmtN(s.traffic.daily.ty)}</div><div class="stat-meta ${deltaClass(s.traffic.daily.inc)}">${fmtPct(s.traffic.daily.inc)}</div></div>
-        <div class="stat-row"><div class="stat-name"><strong>Traffic YTD</strong></div><div class="stat-val">${fmtN(s.traffic.ytd.ty)}</div><div class="stat-meta ${deltaClass(s.traffic.ytd.inc)}">${fmtPct(s.traffic.ytd.inc)}</div></div>
-        <div class="stat-row"><div class="stat-name"><strong>Avg Sale Yesterday</strong></div><div class="stat-val">$${s.avgSales.daily.ty}</div><div class="stat-meta ${deltaClass(s.avgSales.daily.inc)}">${fmtPct(s.avgSales.daily.inc)}</div></div>
-        <div class="stat-row"><div class="stat-name"><strong>Avg Sale YTD</strong></div><div class="stat-val">$${s.avgSales.ytd.ty}</div><div class="stat-meta ${deltaClass(s.avgSales.ytd.inc)}">${fmtPct(s.avgSales.ytd.inc)}</div></div>
-      </div>`;
-  },
-  lastweek: () => {
-    const w = DATA.lastWeek, wk = w.weekly;
-    const vs = (a,b) => { const d=a-b,p=b!==0?d/b:0; return `<span class="${deltaClass(d)}">${arrow(d)} ${fmtPct(p)}</span>`; };
-    return `
-      <div class="section-label">${w.label}</div>
-      <div class="stat-card">
-        <div class="stat-row"><div class="stat-name"><strong>Total Sales</strong><span>Plan ${fmt$(wk.totalSales.plan)} · LY ${fmt$(wk.totalSales.ly)}</span></div><div><div class="stat-val big">${fmt$(wk.totalSales.actual)}</div><div class="stat-meta">vs Plan ${vs(wk.totalSales.actual,wk.totalSales.plan)}</div><div class="stat-meta">vs LY ${vs(wk.totalSales.actual,wk.totalSales.ly)}</div></div></div>
-        <div class="stat-row"><div class="stat-name"><strong>Merch</strong></div><div><div class="stat-val">${fmt$(wk.merchSales.actual)}</div><div class="stat-meta">vs Plan ${vs(wk.merchSales.actual,wk.merchSales.plan)}</div></div></div>
-        <div class="stat-row"><div class="stat-name"><strong>Gas</strong></div><div><div class="stat-val">${fmt$(wk.gasSales.actual)}</div><div class="stat-meta">vs Plan ${vs(wk.gasSales.actual,wk.gasSales.plan)}</div></div></div>
-        <div class="stat-row"><div class="stat-name"><strong>Ancillary</strong></div><div><div class="stat-val">${fmt$(wk.ancillary.actual)}</div><div class="stat-meta">vs Plan ${vs(wk.ancillary.actual,wk.ancillary.plan)}</div></div></div>
-      </div>
-      <div class="section-label">Daily Breakdown</div>
-      <div class="week-strip">${w.days.map(d=>`<div class="day-cell"><div class="day-dow">${d.dow}</div><div class="day-num">${fmt$(d.total)}</div><div class="day-actual">${d.date}</div></div>`).join("")}</div>
-      <div class="section-label">Payroll Last Week</div>
-      <div class="stat-card">
-        <div class="stat-row"><div class="stat-name"><strong>Hours</strong><span>Sch ${fmtN(wk.hours.schedule,0)} · LY ${fmtN(wk.hours.ly,0)}</span></div><div><div class="stat-val">${fmtN(wk.hours.actual,0)}</div><div class="stat-meta">vs Sch ${vs(wk.hours.actual,wk.hours.schedule)}</div></div></div>
-        <div class="stat-row"><div class="stat-name"><strong>Avg Wage</strong></div><div><div class="stat-val">$${wk.avgWage.actual.toFixed(2)}</div><div class="stat-meta">LY $${wk.avgWage.ly.toFixed(2)}</div></div></div>
-        <div class="stat-row"><div class="stat-name"><strong>OT Hours</strong></div><div><div class="stat-val">${wk.otHours.actual.toFixed(2)}</div><div class="stat-meta">LY ${wk.otHours.ly.toFixed(2)}</div></div></div>
-        <div class="stat-row"><div class="stat-name"><strong>Payroll % Merch</strong></div><div><div class="stat-val">${fmtPct(wk.pctMerch.actual,2)}</div><div class="stat-meta">Sch ${fmtPct(wk.pctMerch.schedule,2)} · LY ${fmtPct(wk.pctMerch.ly,2)}</div></div></div>
-        <div class="stat-row"><div class="stat-name"><strong>Payroll % Total</strong></div><div><div class="stat-val">${fmtPct(wk.pctTotal.actual,2)}</div><div class="stat-meta">Sch ${fmtPct(wk.pctTotal.schedule,2)} · LY ${fmtPct(wk.pctTotal.ly,2)}</div></div></div>
-      </div>`;
-  },
-  lastperiod: () => {
-    const lp = DATA.lastPeriod;
-    const row = (label,obj,big) => `<div class="stat-row"><div class="stat-name"><strong>${label}</strong>${obj.pct!==undefined?`<span>${fmtPctRaw(obj.pct,2)} of sales</span>`:''}</div><div><div class="stat-val ${big?'big':''}">${fmt$(obj.ty)}</div>${obj.varLY!==undefined?`<div class="stat-meta ${deltaClass(obj.varLY)}">${arrow(obj.varLY)} ${fmtPctRaw(obj.varLY,2)} vs LY</div>`:''}</div></div>`;
-    const salesRow = (label,obj) => `<div class="stat-row"><div class="stat-name"><strong>${label}</strong><span>Bud ${fmt$(obj.budget)} · LY ${fmt$(obj.ly)}</span></div><div><div class="stat-val">${fmt$(obj.ty)}</div><div class="stat-meta ${deltaClass(obj.varBudgetPct)}">${arrow(obj.varBudgetPct)} ${fmtPctRaw(obj.varBudgetPct,2)} vs Bud</div><div class="stat-meta ${deltaClass(obj.varLYPct)}">${arrow(obj.varLYPct)} ${fmtPctRaw(obj.varLYPct,2)} vs LY</div></div></div>`;
-    return `<div class="section-label">${lp.label}</div><div class="stat-card">${row("Profit",lp.profit.total,true)}${row("Profit ex Gas",lp.profit.exGas)}${row("Profit ex Gas & Ecomm",lp.profit.exGasEcom)}${row("Controllable Profit",lp.profit.controllable)}</div><div class="section-label">Sales</div><div class="stat-card">${salesRow("Warehouse Sales",lp.sales.warehouse)}${salesRow("Merch Sales",lp.sales.merch)}${salesRow("Gas Sales",lp.sales.gas)}${salesRow("Ancillary (ex Gas)",lp.sales.anc)}</div><div class="section-label">Margin</div><div class="stat-card">${row("Gross Profit",lp.margin.grossProfit)}${row("Merch Margin",lp.margin.merch)}</div><div class="section-label">Membership</div><div class="stat-card">${row("Total Membership",lp.members.total)}${row("Regular",lp.members.regular)}${row("Executive",lp.members.exec)}</div><div class="section-label">Controllables</div><div class="stat-card">${row("Salaries",lp.expenses.salaries)}${row("Benefits",lp.expenses.benefits)}${row("Workers Comp",lp.expenses.workersComp)}${row("Total Controllables",lp.expenses.totalControllables)}${row("Total Non-Controllables",lp.expenses.totalNonControll)}</div>`;
-  },
-  payroll: () => {
-    const p = DATA.payroll;
-    return `
-      <div class="section-label">PARIS — Current Week (WTD)</div>
-      <div class="stat-card">
-        <div class="stat-row"><div class="stat-name"><strong>Merch Payroll %</strong><span>Plan ${fmtPctRaw(p.pctPlan*100,2)}</span></div><div><div class="stat-val big">${fmtPctRaw(p.pctActual*100,2)}</div><div class="stat-meta ${p.pctVarPlan>0?'delta-neg':'delta-pos'}">${p.pctVarPlan>0?'+':''}${p.pctVarPlan} bps vs Plan</div><div class="stat-meta ${p.pctVarLY>0?'delta-neg':'delta-pos'}">${p.pctVarLY>0?'+':''}${p.pctVarLY} bps vs LY</div></div></div>
-      </div>
-      <div class="section-label">Hours</div>
-      <div class="stat-card">
-        <div class="stat-row"><div class="stat-name"><strong>Actual Hours</strong><span>Sch ${fmtN(p.hoursSchedule)} · Plan ${fmtN(p.hoursPlan)}</span></div><div><div class="stat-val">${fmtN(p.hoursActual)}</div><div class="stat-meta ${p.hoursVarPlan<0?'delta-pos':'delta-neg'}">${p.hoursVarPlan>0?'+':''}${fmtN(p.hoursVarPlan)} vs Plan</div><div class="stat-meta ${p.hoursIncLY<0?'delta-pos':'delta-neg'}">${fmtPct(p.hoursIncLY)} vs LY</div></div></div>
-        <div class="stat-row"><div class="stat-name"><strong>OT Hours (ex Sun & SNE)</strong></div><div><div class="stat-val">${p.otActual.toFixed(2)}</div><div class="stat-meta">SNE ${p.otSNE.toFixed(2)}</div></div></div>
-        <div class="stat-row"><div class="stat-name"><strong>Hours to Cut</strong><span>to hit merch pay%</span></div><div><div class="stat-val ${p.hoursToCut>0?'delta-warn':'delta-pos'}">${p.hoursToCut>0?fmtN(p.hoursToCut):'0'}</div></div></div>
-      </div>
-      <div class="section-label">Dollars</div>
-      <div class="stat-card">
-        <div class="stat-row"><div class="stat-name"><strong>Actual $</strong><span>Sch ${fmt$(p.dollarsSchedule)} · Plan ${fmt$(p.dollarsPlan)}</span></div><div><div class="stat-val">${fmt$(p.dollarsActual)}</div><div class="stat-meta ${p.dollarsVarPlan<0?'delta-pos':'delta-neg'}">${p.dollarsVarPlan>0?'+':''}${fmt$(p.dollarsVarPlan)} vs Plan</div></div></div>
-        <div class="stat-row"><div class="stat-name"><strong>$ to Cut</strong><span>to hit merch pay%</span></div><div><div class="stat-val ${p.dollarsToCut>0?'delta-warn':'delta-pos'}">${p.dollarsToCut>0?fmt$(p.dollarsToCut):'$0'}</div></div></div>
-        <div class="stat-row"><div class="stat-name"><strong>Avg Wage</strong></div><div><div class="stat-val">$${p.avgWage.toFixed(2)}</div></div></div>
-        <div class="stat-row"><div class="stat-name"><strong>Productivity</strong><span>sales per hour</span></div><div><div class="stat-val">$${p.productivity}</div></div></div>
-      </div>
-      <div class="section-label">Staff Mix</div>
-      <div class="stat-card">
-        <div class="stat-row"><div class="stat-name"><strong>Full Time</strong></div><div><div class="stat-val">${DATA.membership.ftpt.ft}</div><div class="stat-meta">${fmtPct(DATA.membership.ftpt.ftPct)}</div></div></div>
-        <div class="stat-row"><div class="stat-name"><strong>Part Time</strong></div><div><div class="stat-val">${DATA.membership.ftpt.pt}</div><div class="stat-meta">${fmtPct(DATA.membership.ftpt.ptPct)}</div></div></div>
-        <div class="stat-row"><div class="stat-name"><strong>Limited Part Time</strong></div><div><div class="stat-val">${DATA.membership.ftpt.lpt}</div></div></div>
-      </div>`;
-  },
-  membership: () => `<div class="toggle-row" id="memToggle"><div class="toggle" data-period="daily">Yesterday</div><div class="toggle" data-period="wtd">Running Wk</div><div class="toggle active" data-period="ptd">PTD</div><div class="toggle" data-period="ytd">YTD</div></div><div id="memContent">${membershipPeriod("ptd")}</div>`,
-  depts: () => `<div class="toggle-row" id="deptToggle"><div class="toggle" data-period="daily">Yesterday</div><div class="toggle" data-period="wtd">Running Wk</div><div class="toggle active" data-period="ptd">PTD</div><div class="toggle" data-period="ytd">YTD</div></div><div id="deptList">${deptList("ptd")}</div>`,
-  fresh: () => `<div class="toggle-row" id="freshToggle"><div class="toggle active" data-cat="overview">All</div><div class="toggle" data-cat="meat">Meat</div><div class="toggle" data-cat="bakery">Bakery</div><div class="toggle" data-cat="deli">Deli</div><div class="toggle" data-cat="produce">Produce</div><div class="toggle" data-cat="foodCourt">Food Ct</div></div><div id="freshContent">${freshContent("overview")}</div>`,
-  shrink: () => {
-    const s = DATA.shrink, d = [...DATA.shrinkDetail].sort((a,b)=>b.ytdPct-a.ytdPct);
-    return `<div class="section-label">D&D YTD by Category</div>${s.map(r=>`<div class="dept-row"><div class="dept-name">${r.name}</div><div class="dept-sales">${fmt$(r.ddYtd*1000)}</div><div class="dept-inc ${r.ddPctYtd>0.02?'delta-neg':''}">${fmtPctRaw(r.ddPctYtd*100,2)}</div></div>`).join("")}<div class="section-label">Top D&D % by Dept (YTD)</div>${d.map(r=>`<div class="dept-row"><div class="dept-name">${r.name}</div><div class="dept-sales">${fmt$(r.ytd*1000)}</div><div class="dept-inc ${r.ytdPct>0.02?'delta-neg':''}">${fmtPctRaw(r.ytdPct*100,2)}</div></div>`).join("")}`;
-  },
-  ancillary: () => {
-    const a = DATA.ancillary;
-    const card = (label,obj) => `<div class="stat-card"><div class="stat-row"><div class="stat-name"><strong>${label}</strong><span>Last Period</span></div><div><div class="stat-val">${fmt$(obj.sales)}</div></div></div><div class="stat-row"><div class="stat-name"><strong>Profit</strong><span>${fmtPctRaw(obj.profitPct,2)} of sales</span></div><div><div class="stat-val ${obj.profit<0?'delta-neg':'delta-pos'}">${fmt$(obj.profit)}</div></div></div><div class="stat-row"><div class="stat-name"><strong>YTD</strong></div><div><div class="stat-val">${fmt$(obj.ytdSales)}</div><div class="stat-meta ${obj.ytdProfit<0?'delta-neg':'delta-pos'}">Profit ${fmt$(obj.ytdProfit)}</div></div></div></div>`;
-    return `<div class="section-label">Gasoline</div>${card("Gas",a.gasoline)}<div class="section-label">Pharmacy</div>${card("Pharmacy Rx",a.pharmRx)}${card("Pharmacy OTC",a.pharmOtc)}<div class="section-label">Optical & Hearing</div>${card("Optical",a.optical)}${card("Hearing Aids",a.hearing)}`;
-  }
+let catState={period:"wtd",expanded:null};
+
+const panelHTML={
+sales:()=>{const s=DATA.sales;const q=(o,l)=>`<div class="section-label">${l}</div><div class="quad">${["daily","wtd","ptd","ytd"].map(k=>`<div class="quad-cell"><div class="quad-label">${k==="daily"?"Yesterday":k==="wtd"?"Running Wk":k.toUpperCase()}</div><div class="quad-val">${fmt$(o[k].ty)}</div><div class="quad-sub ${deltaClass(o[k].inc)}">${arrow(o[k].inc)} ${fmtPct(o[k].inc)}</div></div>`).join("")}</div>`;return q({daily:s.daily,wtd:s.wtd,ptd:s.ptd,ytd:s.ytd},"Total Sales")+q(s.merch,"Merch Sales")+q(s.gas,"Gas Sales")+`<div class="section-label">Traffic & Avg Sale</div><div class="stat-card"><div class="stat-row"><div class="stat-name"><strong>Traffic Yesterday</strong></div><div class="stat-val">${fmtN(s.traffic.daily.ty)}</div><div class="stat-meta ${deltaClass(s.traffic.daily.inc)}">${fmtPct(s.traffic.daily.inc)}</div></div><div class="stat-row"><div class="stat-name"><strong>Traffic YTD</strong></div><div class="stat-val">${fmtN(s.traffic.ytd.ty)}</div><div class="stat-meta ${deltaClass(s.traffic.ytd.inc)}">${fmtPct(s.traffic.ytd.inc)}</div></div><div class="stat-row"><div class="stat-name"><strong>Avg Sale Yesterday</strong></div><div class="stat-val">$${s.avgSales.daily.ty}</div><div class="stat-meta ${deltaClass(s.avgSales.daily.inc)}">${fmtPct(s.avgSales.daily.inc)}</div></div><div class="stat-row"><div class="stat-name"><strong>Avg Sale YTD</strong></div><div class="stat-val">$${s.avgSales.ytd.ty}</div><div class="stat-meta ${deltaClass(s.avgSales.ytd.inc)}">${fmtPct(s.avgSales.ytd.inc)}</div></div></div>`},
+lastweek:()=>{const w=DATA.lastWeek,wk=w.weekly;const vs=(a,b)=>{const d=a-b,p=b!==0?d/b:0;return`<span class="${deltaClass(d)}">${arrow(d)} ${fmtPct(p)}</span>`};return`<div class="section-label">${w.label}</div><div class="stat-card"><div class="stat-row"><div class="stat-name"><strong>Total Sales</strong><span>Plan ${fmt$(wk.totalSales.plan)} · LY ${fmt$(wk.totalSales.ly)}</span></div><div><div class="stat-val big">${fmt$(wk.totalSales.actual)}</div><div class="stat-meta">vs Plan ${vs(wk.totalSales.actual,wk.totalSales.plan)}</div><div class="stat-meta">vs LY ${vs(wk.totalSales.actual,wk.totalSales.ly)}</div></div></div><div class="stat-row"><div class="stat-name"><strong>Merch</strong></div><div><div class="stat-val">${fmt$(wk.merchSales.actual)}</div><div class="stat-meta">vs Plan ${vs(wk.merchSales.actual,wk.merchSales.plan)}</div></div></div><div class="stat-row"><div class="stat-name"><strong>Gas</strong></div><div><div class="stat-val">${fmt$(wk.gasSales.actual)}</div><div class="stat-meta">vs Plan ${vs(wk.gasSales.actual,wk.gasSales.plan)}</div></div></div><div class="stat-row"><div class="stat-name"><strong>Ancillary</strong></div><div><div class="stat-val">${fmt$(wk.ancillary.actual)}</div><div class="stat-meta">vs Plan ${vs(wk.ancillary.actual,wk.ancillary.plan)}</div></div></div></div><div class="section-label">Daily Breakdown</div><div class="week-strip">${w.days.map(d=>`<div class="day-cell"><div class="day-dow">${d.dow}</div><div class="day-num">${fmt$(d.total)}</div><div class="day-actual">${d.date}</div></div>`).join("")}</div><div class="section-label">Payroll Last Week</div><div class="stat-card"><div class="stat-row"><div class="stat-name"><strong>Hours</strong><span>Sch ${fmtN(wk.hours.schedule,0)} · LY ${fmtN(wk.hours.ly,0)}</span></div><div><div class="stat-val">${fmtN(wk.hours.actual,0)}</div><div class="stat-meta">vs Sch ${vs(wk.hours.actual,wk.hours.schedule)}</div></div></div><div class="stat-row"><div class="stat-name"><strong>Avg Wage</strong></div><div><div class="stat-val">$${wk.avgWage.actual.toFixed(2)}</div><div class="stat-meta">LY $${wk.avgWage.ly.toFixed(2)}</div></div></div><div class="stat-row"><div class="stat-name"><strong>OT Hours</strong></div><div><div class="stat-val">${wk.otHours.actual.toFixed(2)}</div><div class="stat-meta">LY ${wk.otHours.ly.toFixed(2)}</div></div></div><div class="stat-row"><div class="stat-name"><strong>Payroll % Merch</strong></div><div><div class="stat-val">${fmtPct(wk.pctMerch.actual,2)}</div><div class="stat-meta">Sch ${fmtPct(wk.pctMerch.schedule,2)} · LY ${fmtPct(wk.pctMerch.ly,2)}</div></div></div><div class="stat-row"><div class="stat-name"><strong>Payroll % Total</strong></div><div><div class="stat-val">${fmtPct(wk.pctTotal.actual,2)}</div><div class="stat-meta">Sch ${fmtPct(wk.pctTotal.schedule,2)} · LY ${fmtPct(wk.pctTotal.ly,2)}</div></div></div></div>`},
+lastperiod:()=>{const lp=DATA.lastPeriod;const row=(l,o,b)=>`<div class="stat-row"><div class="stat-name"><strong>${l}</strong>${o.pct!==undefined?`<span>${fmtPctRaw(o.pct,2)} of sales</span>`:''}</div><div><div class="stat-val ${b?'big':''}">${fmt$(o.ty)}</div>${o.varLY!==undefined?`<div class="stat-meta ${deltaClass(o.varLY)}">${arrow(o.varLY)} ${fmtPctRaw(o.varLY,2)} vs LY</div>`:''}</div></div>`;const sR=(l,o)=>`<div class="stat-row"><div class="stat-name"><strong>${l}</strong><span>Bud ${fmt$(o.budget)} · LY ${fmt$(o.ly)}</span></div><div><div class="stat-val">${fmt$(o.ty)}</div><div class="stat-meta ${deltaClass(o.varBudgetPct)}">${arrow(o.varBudgetPct)} ${fmtPctRaw(o.varBudgetPct,2)} vs Bud</div><div class="stat-meta ${deltaClass(o.varLYPct)}">${arrow(o.varLYPct)} ${fmtPctRaw(o.varLYPct,2)} vs LY</div></div></div>`;return`<div class="section-label">${lp.label}</div><div class="stat-card">${row("Profit",lp.profit.total,1)}${row("Profit ex Gas",lp.profit.exGas)}${row("Profit ex Gas & Ecomm",lp.profit.exGasEcom)}${row("Controllable Profit",lp.profit.controllable)}</div><div class="section-label">Sales</div><div class="stat-card">${sR("Warehouse Sales",lp.sales.warehouse)}${sR("Merch Sales",lp.sales.merch)}${sR("Gas Sales",lp.sales.gas)}${sR("Ancillary",lp.sales.anc)}</div><div class="section-label">Margin</div><div class="stat-card">${row("Gross Profit",lp.margin.grossProfit)}${row("Merch Margin",lp.margin.merch)}</div><div class="section-label">Membership</div><div class="stat-card">${row("Total Membership",lp.members.total)}${row("Regular",lp.members.regular)}${row("Executive",lp.members.exec)}</div><div class="section-label">Controllables</div><div class="stat-card">${row("Salaries",lp.expenses.salaries)}${row("Benefits",lp.expenses.benefits)}${row("Workers Comp",lp.expenses.workersComp)}${row("Total Controllables",lp.expenses.totalControllables)}${row("Total Non-Controllables",lp.expenses.totalNonControll)}</div>`},
+payroll:()=>{const p=DATA.payroll;return`<div class="section-label">PARIS — Current Week (WTD)</div><div class="stat-card"><div class="stat-row"><div class="stat-name"><strong>Merch Payroll %</strong><span>Plan ${fmtPctRaw(p.pctPlan*100,2)}</span></div><div><div class="stat-val big">${fmtPctRaw(p.pctActual*100,2)}</div><div class="stat-meta ${p.pctVarPlan>0?'delta-neg':'delta-pos'}">${p.pctVarPlan>0?'+':''}${p.pctVarPlan} bps vs Plan</div><div class="stat-meta ${p.pctVarLY>0?'delta-neg':'delta-pos'}">${p.pctVarLY>0?'+':''}${p.pctVarLY} bps vs LY</div></div></div></div><div class="section-label">Hours</div><div class="stat-card"><div class="stat-row"><div class="stat-name"><strong>Actual Hours</strong><span>Sch ${fmtN(p.hoursSchedule)} · Plan ${fmtN(p.hoursPlan)}</span></div><div><div class="stat-val">${fmtN(p.hoursActual)}</div><div class="stat-meta ${p.hoursVarPlan<0?'delta-pos':'delta-neg'}">${p.hoursVarPlan>0?'+':''}${fmtN(p.hoursVarPlan)} vs Plan</div><div class="stat-meta ${p.hoursIncLY<0?'delta-pos':'delta-neg'}">${fmtPct(p.hoursIncLY)} vs LY</div></div></div><div class="stat-row"><div class="stat-name"><strong>OT Hours (ex Sun & SNE)</strong></div><div><div class="stat-val">${p.otActual.toFixed(2)}</div><div class="stat-meta">SNE ${p.otSNE.toFixed(2)}</div></div></div><div class="stat-row"><div class="stat-name"><strong>Hours to Cut</strong><span>to hit merch pay%</span></div><div><div class="stat-val ${p.hoursToCut>0?'delta-warn':'delta-pos'}">${p.hoursToCut>0?fmtN(p.hoursToCut):'0'}</div></div></div></div><div class="section-label">Dollars</div><div class="stat-card"><div class="stat-row"><div class="stat-name"><strong>Actual $</strong><span>Sch ${fmt$(p.dollarsSchedule)} · Plan ${fmt$(p.dollarsPlan)}</span></div><div><div class="stat-val">${fmt$(p.dollarsActual)}</div><div class="stat-meta ${p.dollarsVarPlan<0?'delta-pos':'delta-neg'}">${p.dollarsVarPlan>0?'+':''}${fmt$(p.dollarsVarPlan)} vs Plan</div></div></div><div class="stat-row"><div class="stat-name"><strong>$ to Cut</strong><span>to hit merch pay%</span></div><div><div class="stat-val ${p.dollarsToCut>0?'delta-warn':'delta-pos'}">${p.dollarsToCut>0?fmt$(p.dollarsToCut):'$0'}</div></div></div><div class="stat-row"><div class="stat-name"><strong>Avg Wage</strong></div><div><div class="stat-val">$${p.avgWage.toFixed(2)}</div></div></div><div class="stat-row"><div class="stat-name"><strong>Productivity</strong><span>sales per hour</span></div><div><div class="stat-val">$${p.productivity}</div></div></div></div><div class="section-label">Staff Mix</div><div class="stat-card"><div class="stat-row"><div class="stat-name"><strong>Full Time</strong></div><div><div class="stat-val">${DATA.membership.ftpt.ft}</div><div class="stat-meta">${fmtPct(DATA.membership.ftpt.ftPct)}</div></div></div><div class="stat-row"><div class="stat-name"><strong>Part Time</strong></div><div><div class="stat-val">${DATA.membership.ftpt.pt}</div><div class="stat-meta">${fmtPct(DATA.membership.ftpt.ptPct)}</div></div></div><div class="stat-row"><div class="stat-name"><strong>Limited Part Time</strong></div><div><div class="stat-val">${DATA.membership.ftpt.lpt}</div></div></div></div>`},
+membership:()=>`<div class="toggle-row" id="memToggle"><div class="toggle" data-period="daily">Yesterday</div><div class="toggle" data-period="wtd">Running Wk</div><div class="toggle active" data-period="ptd">PTD</div><div class="toggle" data-period="ytd">YTD</div></div><div id="memContent">${memPer("ptd")}</div>`,
+depts:()=>`<div class="toggle-row" id="deptToggle"><div class="toggle" data-period="daily">Yesterday</div><div class="toggle" data-period="wtd">Running Wk</div><div class="toggle active" data-period="ptd">PTD</div><div class="toggle" data-period="ytd">YTD</div></div><div id="deptList">${deptList("ptd")}</div>`,
+categories:()=>`<div class="note">Categories as of ${DATA.asOfCategories} — refreshed Mondays</div><div class="toggle-row" id="catToggle"><div class="toggle ${catState.period==='wtd'?'active':''}" data-period="wtd">WTD</div><div class="toggle ${catState.period==='ytd'?'active':''}" data-period="ytd">YTD</div></div><div id="catContent">${catGroupList()}</div>`,
+fresh:()=>`<div class="toggle-row" id="freshToggle"><div class="toggle active" data-cat="overview">All</div><div class="toggle" data-cat="meat">Meat</div><div class="toggle" data-cat="bakery">Bakery</div><div class="toggle" data-cat="deli">Deli</div><div class="toggle" data-cat="produce">Produce</div><div class="toggle" data-cat="foodCourt">Food Ct</div></div><div id="freshContent">${freshContent("overview")}</div>`,
+shrink:()=>{const s=DATA.shrink,d=[...DATA.shrinkDetail].sort((a,b)=>b.ytdPct-a.ytdPct);return`<div class="section-label">D&D YTD by Category</div>${s.map(r=>`<div class="dept-row"><div class="dept-name">${r.name}</div><div class="dept-sales">${fmt$(r.ddYtd*1000)}</div><div class="dept-inc ${r.ddPctYtd>.02?'delta-neg':''}">${fmtPctRaw(r.ddPctYtd*100,2)}</div></div>`).join("")}<div class="section-label">Top D&D % by Dept (YTD)</div>${d.map(r=>`<div class="dept-row"><div class="dept-name">${r.name}</div><div class="dept-sales">${fmt$(r.ytd*1000)}</div><div class="dept-inc ${r.ytdPct>.02?'delta-neg':''}">${fmtPctRaw(r.ytdPct*100,2)}</div></div>`).join("")}`},
+ancillary:()=>{const a=DATA.ancillary;const c=(l,o)=>`<div class="stat-card"><div class="stat-row"><div class="stat-name"><strong>${l}</strong><span>Last Period</span></div><div><div class="stat-val">${fmt$(o.sales)}</div></div></div><div class="stat-row"><div class="stat-name"><strong>Profit</strong><span>${fmtPctRaw(o.profitPct,2)} of sales</span></div><div><div class="stat-val ${o.profit<0?'delta-neg':'delta-pos'}">${fmt$(o.profit)}</div></div></div><div class="stat-row"><div class="stat-name"><strong>YTD</strong></div><div><div class="stat-val">${fmt$(o.ytdSales)}</div><div class="stat-meta ${o.ytdProfit<0?'delta-neg':'delta-pos'}">Profit ${fmt$(o.ytdProfit)}</div></div></div></div>`;return`<div class="section-label">Gasoline</div>${c("Gas",a.gasoline)}<div class="section-label">Pharmacy</div>${c("Pharmacy Rx",a.pharmRx)}${c("Pharmacy OTC",a.pharmOtc)}<div class="section-label">Optical & Hearing</div>${c("Optical",a.optical)}${c("Hearing Aids",a.hearing)}`}
 };
 
-function membershipPeriod(p) {
-  const m = DATA.membership[p];
-  const row = (lbl,val,inc,isPct=false,isCount=false) => {
-    if (val===undefined) return "";
-    const display = isPct ? fmtPct(val,1) : (isCount ? fmtN(val) : fmt$(val));
-    return `<div class="stat-row"><div class="stat-name"><strong>${lbl}</strong></div><div><div class="stat-val">${display}</div>${inc!==undefined?`<div class="stat-meta ${deltaClass(inc)}">${fmtPct(inc)} vs LY</div>`:""}</div></div>`;
-  };
-  return `<div class="stat-card">${row("Member Income",m.memberIncome.ty,m.memberIncome.inc)}${row("Gold Signups",m.goldSignups.ty,m.goldSignups.inc,false,true)}${row("Business Signups",m.bizSignups.ty,m.bizSignups.inc,false,true)}${row("Reactivations",m.reactivations.ty,m.reactivations.inc,false,true)}${row("Total Signups+Reactivations",m.total.ty,m.total.inc,false,true)}</div><div class="stat-card">${row("New Member Exec %",m.newMemberExecPct.ty,m.newMemberExecPct.inc,true)}${row("Exec Upgrades",m.execUpgrades.ty,m.execUpgrades.inc,false,true)}${row("Triple Play %",m.triplePlay.ty,m.triplePlay.inc,true)}${row("NMAR %",m.nmarPct.ty,m.nmarPct.inc,true)}</div><div class="stat-card">${row("Credit Card Apps",m.creditCardApps.ty,m.creditCardApps.inc,false,true)}${row("New Member CC %",m.newMemberCCPct.ty,m.newMemberCCPct.inc,true)}${row("New Member Email %",m.newMemberEmailPct.ty,m.newMemberEmailPct.inc,true)}</div>`;
+function catGroupList(){
+return Object.entries(DATA.categories).map(([g,cats])=>{
+const tops=cats.filter(c=>!c.n.startsWith("  "));
+const total=tops.reduce((s,c)=>s+(catState.period==="wtd"?c.wtd:c.ytd),0);
+const exp=catState.expanded===g;
+return`<div class="cat-group" data-group="${g}"><div class="cat-group-head"><div class="cat-group-name">${exp?'▼':'▶'} ${g}</div><div class="cat-group-meta">${fmt$(total)} · ${tops.length} depts</div></div>${exp?'<div style="margin-top:10px">'+cats.map(c=>catRow(c)).join("")+'</div>':''}</div>`;
+}).join("");
 }
 
-function deptList(period) {
-  const incKey = period==="daily" ? null : period+"Inc";
-  const sorted = [...DATA.departments].sort((a,b) => parseInt(a.code)-parseInt(b.code));
-  return sorted.map(d => {
-    const val = d[period], inc = incKey ? d[incKey] : null;
-    return `<div class="dept-row"><div class="dept-name">${d.code} ${d.name}</div><div class="dept-sales">${fmt$(val)}</div><div class="dept-inc ${inc!==null?deltaClass(inc):''}">${inc!==null?fmtPct(inc):'—'}</div></div>`;
-  }).join("");
+function catRow(c){
+const sales=catState.period==="wtd"?c.wtd:c.ytd;
+const inc=catState.period==="wtd"?c.wtdI:c.ytdI;
+const isSub=c.n.startsWith("  ");
+return`<div class="cat-row" style="${isSub?'margin-left:14px;':''}"><div class="cat-rname">${c.n.trim()}</div><div class="cat-rsales">${fmt$(sales)}</div><div class="cat-rinc ${deltaClass(inc)}">${inc!==0?arrow(inc)+' '+fmtPct(inc,1):'—'}</div><div class="cat-roh">${c.oh>0?'OH '+fmtN(c.oh):''}</div></div>`;
 }
 
-function freshContent(cat) {
-  const f = DATA.fresh;
-  if (cat === "overview") {
-    const cats = [{key:"meat",label:"Meat",data:f.meat},{key:"bakery",label:"Bakery",data:f.bakery},{key:"deli",label:"Service Deli",data:f.deli},{key:"produce",label:"Produce",data:f.produce},{key:"foodCourt",label:"Food Court",data:f.foodCourt}];
-    return `<div class="section-label">Fresh Total — Last Period (P9)</div><div class="stat-card"><div class="stat-row"><div class="stat-name"><strong>Total Fresh Sales</strong><span>LY ${fmt$(f.total.sales.ly)}</span></div><div><div class="stat-val big">${fmt$(f.total.sales.ty)}</div><div class="stat-meta ${deltaClass(f.total.sales.varLY)}">${arrow(f.total.sales.varLY)} ${fmtPctRaw(f.total.sales.varLY,2)} vs LY</div></div></div><div class="stat-row"><div class="stat-name"><strong>YTD Sales</strong></div><div><div class="stat-val">${fmt$(f.total.ytdSales.ty)}</div><div class="stat-meta ${deltaClass(f.total.ytdSales.varLY)}">${fmtPctRaw(f.total.ytdSales.varLY,2)} vs LY</div></div></div><div class="stat-row"><div class="stat-name"><strong>Net Margin</strong><span>${fmtPctRaw(f.total.netMargin.pct,2)} of sales</span></div><div><div class="stat-val">${fmt$(f.total.netMargin.ty)}</div><div class="stat-meta ${deltaClass(f.total.netMargin.varLY)}">${fmtPctRaw(f.total.netMargin.varLY,2)} vs LY</div></div></div></div><div class="section-label">By Category — Last Period</div>${cats.map(c=>`<div class="dept-row"><div class="dept-name">${c.label}</div><div class="dept-sales">${fmt$(c.data.sales.ty)}</div><div class="dept-inc ${deltaClass(c.data.sales.varLY)}">${arrow(c.data.sales.varLY)} ${fmtPctRaw(c.data.sales.varLY,1)}</div></div>`).join("")}`;
-  }
-  const d = f[cat];
-  const name = ({meat:"Meat",bakery:"Bakery",deli:"Service Deli",produce:"Produce",foodCourt:"Food Court"})[cat];
-  if (cat === "foodCourt") {
-    return `<div class="section-label">${name} — Last Period (P9)</div><div class="stat-card"><div class="stat-row"><div class="stat-name"><strong>Sales</strong><span>LY ${fmt$(d.sales.ly)} · Bud ${fmt$(d.sales.budget)}</span></div><div><div class="stat-val big">${fmt$(d.sales.ty)}</div><div class="stat-meta ${deltaClass(d.sales.varLY)}">${arrow(d.sales.varLY)} ${fmtPctRaw(d.sales.varLY,2)} vs LY</div><div class="stat-meta ${deltaClass(d.sales.varBudget)}">${arrow(d.sales.varBudget)} ${fmtPctRaw(d.sales.varBudget,2)} vs Bud</div></div></div><div class="stat-row"><div class="stat-name"><strong>YTD Sales</strong></div><div><div class="stat-val">${fmt$(d.ytdSales.ty)}</div><div class="stat-meta ${deltaClass(d.ytdSales.varLY)}">${fmtPctRaw(d.ytdSales.varLY,2)} vs LY</div></div></div></div><div class="section-label">Margin & Payroll</div><div class="stat-card"><div class="stat-row"><div class="stat-name"><strong>Gross Margin</strong><span>${fmtPctRaw(d.grossMargin.pct,2)} of sales</span></div><div><div class="stat-val">${fmt$(d.grossMargin.ty)}</div><div class="stat-meta ${deltaClass(d.grossMargin.varLY)}">${fmtPctRaw(d.grossMargin.varLY,2)} vs LY</div></div></div><div class="stat-row"><div class="stat-name"><strong>Payroll</strong><span>${fmtPctRaw(d.payroll.pct,2)} of sales</span></div><div><div class="stat-val">${fmt$(d.payroll.ty)}</div></div></div><div class="stat-row"><div class="stat-name"><strong>Benefits</strong><span>${fmtPctRaw(d.benefits.pct,2)} of sales</span></div><div><div class="stat-val">${fmt$(d.benefits.ty)}</div></div></div><div class="stat-row"><div class="stat-name"><strong>Net Profit</strong><span>${fmtPctRaw(d.profit.pct,2)} of sales</span></div><div><div class="stat-val ${d.profit.ty<0?'delta-neg':'delta-pos'}">${fmt$(d.profit.ty)}</div><div class="stat-meta ${deltaClass(d.profit.varLY)}">${fmtPctRaw(d.profit.varLY,2)} vs LY</div></div></div><div class="stat-row"><div class="stat-name"><strong>YTD Profit</strong></div><div><div class="stat-val ${d.ytdProfit.ty<0?'delta-neg':'delta-pos'}">${fmt$(d.ytdProfit.ty)}</div></div></div></div><div class="section-label">Top 10 Items — Week</div>${d.topItems.map(i=>`<div class="top-item"><div class="rank">#${i.rank}</div><div class="item-name">${i.name}<div style="font-size:11px;color:var(--muted);margin-top:2px">${fmtN(i.units)} units</div></div><div class="item-sales">${fmt$(i.sales)}</div></div>`).join("")}`;
-  }
-  return `<div class="section-label">${name} — Last Period (P9)</div><div class="stat-card"><div class="stat-row"><div class="stat-name"><strong>Sales</strong><span>LY ${fmt$(d.sales.ly)} · Bud ${fmt$(d.sales.budget)}</span></div><div><div class="stat-val big">${fmt$(d.sales.ty)}</div><div class="stat-meta ${deltaClass(d.sales.varLY)}">${arrow(d.sales.varLY)} ${fmtPctRaw(d.sales.varLY,2)} vs LY</div><div class="stat-meta ${deltaClass(d.sales.varBudget)}">${arrow(d.sales.varBudget)} ${fmtPctRaw(d.sales.varBudget,2)} vs Bud</div></div></div><div class="stat-row"><div class="stat-name"><strong>YTD Sales</strong></div><div><div class="stat-val">${fmt$(d.ytdSales.ty)}</div><div class="stat-meta ${deltaClass(d.ytdSales.varLY)}">${fmtPctRaw(d.ytdSales.varLY,2)} vs LY</div></div></div></div><div class="section-label">Margin & Flow</div><div class="stat-card"><div class="stat-row"><div class="stat-name"><strong>Flow</strong><span>${fmtPctRaw(d.flow.pct,2)} of sales</span></div><div><div class="stat-val">${fmt$(d.flow.ty)}</div></div></div><div class="stat-row"><div class="stat-name"><strong>Margin before Payroll/Shrink</strong><span>${fmtPctRaw(d.margin.pct,2)} of sales</span></div><div><div class="stat-val">${fmt$(d.margin.ty)}</div><div class="stat-meta ${deltaClass(d.margin.varLY)}">${fmtPctRaw(d.margin.varLY,2)} vs LY</div></div></div><div class="stat-row"><div class="stat-name"><strong>Net Margin</strong><span>${fmtPctRaw(d.netMargin.pct,2)} of sales</span></div><div><div class="stat-val">${fmt$(d.netMargin.ty)}</div><div class="stat-meta ${deltaClass(d.netMargin.varLY)}">${fmtPctRaw(d.netMargin.varLY,2)} vs LY</div></div></div></div><div class="section-label">Payroll & D&D</div><div class="stat-card">${d.payroll.ty !== 0 ? `<div class="stat-row"><div class="stat-name"><strong>Payroll (M/B/D pool)</strong><span>${fmtPctRaw(d.payroll.pct,2)} of sales</span></div><div><div class="stat-val">${fmt$(d.payroll.ty)}</div></div></div>` : `<div class="stat-row"><div class="stat-name"><strong>Payroll</strong><span>not allocated</span></div><div><div class="stat-val">—</div></div></div>`}<div class="stat-row"><div class="stat-name"><strong>Whse Salvage/D&D</strong><span>${fmtPctRaw(d.dd.pct,2)} of sales</span></div><div><div class="stat-val ${d.dd.ty<0?'delta-neg':''}">${fmt$(d.dd.ty)}</div></div></div><div class="stat-row"><div class="stat-name"><strong>Fresh Op Shrink/Overage</strong><span>${fmtPctRaw(d.shrink.pct,2)} of sales</span></div><div><div class="stat-val ${d.shrink.ty<0?'delta-neg':'delta-pos'}">${fmt$(d.shrink.ty)}</div></div></div>${d.reprocess?`<div class="stat-row"><div class="stat-name"><strong>Reprocess</strong><span>${fmtPctRaw(d.reprocess.pct,2)} of sales</span></div><div><div class="stat-val delta-neg">${fmt$(d.reprocess.ty)}</div></div></div>`:""}</div><div class="section-label">Top 10 Items — Week</div>${d.topItems.map(i=>`<div class="top-item"><div class="rank">#${i.rank}</div><div class="item-name">${i.name}<div style="font-size:11px;color:var(--muted);margin-top:2px">${fmtN(i.units)} units</div></div><div class="item-sales">${fmt$(i.sales)}</div></div>`).join("")}`;
+function memPer(p){const m=DATA.membership[p];const r=(l,v,i,pct=false,cnt=false)=>{if(v===undefined)return"";const d=pct?fmtPct(v,1):(cnt?fmtN(v):fmt$(v));return`<div class="stat-row"><div class="stat-name"><strong>${l}</strong></div><div><div class="stat-val">${d}</div>${i!==undefined?`<div class="stat-meta ${deltaClass(i)}">${fmtPct(i)} vs LY</div>`:""}</div></div>`};return`<div class="stat-card">${r("Member Income",m.memberIncome.ty,m.memberIncome.inc)}${r("Gold Signups",m.goldSignups.ty,m.goldSignups.inc,false,true)}${r("Business Signups",m.bizSignups.ty,m.bizSignups.inc,false,true)}${r("Reactivations",m.reactivations.ty,m.reactivations.inc,false,true)}${r("Total Signups+Reactivations",m.total.ty,m.total.inc,false,true)}</div><div class="stat-card">${r("New Member Exec %",m.newMemberExecPct.ty,m.newMemberExecPct.inc,true)}${r("Exec Upgrades",m.execUpgrades.ty,m.execUpgrades.inc,false,true)}${r("Triple Play %",m.triplePlay.ty,m.triplePlay.inc,true)}${r("NMAR %",m.nmarPct.ty,m.nmarPct.inc,true)}</div><div class="stat-card">${r("Credit Card Apps",m.creditCardApps.ty,m.creditCardApps.inc,false,true)}${r("New Member CC %",m.newMemberCCPct.ty,m.newMemberCCPct.inc,true)}${r("New Member Email %",m.newMemberEmailPct.ty,m.newMemberEmailPct.inc,true)}</div>`}
+
+function deptList(p){const ik=p==="daily"?null:p+"Inc";const s=[...DATA.departments].sort((a,b)=>parseInt(a.code)-parseInt(b.code));return s.map(d=>{const v=d[p],i=ik?d[ik]:null;return`<div class="dept-row"><div class="dept-name">${d.code} ${d.name}</div><div class="dept-sales">${fmt$(v)}</div><div class="dept-inc ${i!==null?deltaClass(i):''}">${i!==null?fmtPct(i):'—'}</div></div>`}).join("")}
+
+function freshContent(cat){const f=DATA.fresh;if(cat==="overview"){const cats=[{key:"meat",label:"Meat",data:f.meat},{key:"bakery",label:"Bakery",data:f.bakery},{key:"deli",label:"Service Deli",data:f.deli},{key:"produce",label:"Produce",data:f.produce},{key:"foodCourt",label:"Food Court",data:f.foodCourt}];return`<div class="section-label">Fresh Total — Last Period (P9)</div><div class="stat-card"><div class="stat-row"><div class="stat-name"><strong>Total Fresh Sales</strong><span>LY ${fmt$(f.total.sales.ly)}</span></div><div><div class="stat-val big">${fmt$(f.total.sales.ty)}</div><div class="stat-meta ${deltaClass(f.total.sales.varLY)}">${arrow(f.total.sales.varLY)} ${fmtPctRaw(f.total.sales.varLY,2)} vs LY</div></div></div><div class="stat-row"><div class="stat-name"><strong>YTD Sales</strong></div><div><div class="stat-val">${fmt$(f.total.ytdSales.ty)}</div><div class="stat-meta ${deltaClass(f.total.ytdSales.varLY)}">${fmtPctRaw(f.total.ytdSales.varLY,2)} vs LY</div></div></div><div class="stat-row"><div class="stat-name"><strong>Net Margin</strong><span>${fmtPctRaw(f.total.netMargin.pct,2)} of sales</span></div><div><div class="stat-val">${fmt$(f.total.netMargin.ty)}</div><div class="stat-meta ${deltaClass(f.total.netMargin.varLY)}">${fmtPctRaw(f.total.netMargin.varLY,2)} vs LY</div></div></div></div><div class="section-label">By Category — Last Period</div>${cats.map(c=>`<div class="dept-row"><div class="dept-name">${c.label}</div><div class="dept-sales">${fmt$(c.data.sales.ty)}</div><div class="dept-inc ${deltaClass(c.data.sales.varLY)}">${arrow(c.data.sales.varLY)} ${fmtPctRaw(c.data.sales.varLY,1)}</div></div>`).join("")}`}const d=f[cat];const name=({meat:"Meat",bakery:"Bakery",deli:"Service Deli",produce:"Produce",foodCourt:"Food Court"})[cat];if(cat==="foodCourt"){return`<div class="section-label">${name} — Last Period (P9)</div><div class="stat-card"><div class="stat-row"><div class="stat-name"><strong>Sales</strong></div><div><div class="stat-val big">${fmt$(d.sales.ty)}</div><div class="stat-meta ${deltaClass(d.sales.varLY)}">${arrow(d.sales.varLY)} ${fmtPctRaw(d.sales.varLY,2)} vs LY</div></div></div><div class="stat-row"><div class="stat-name"><strong>YTD Sales</strong></div><div><div class="stat-val">${fmt$(d.ytdSales.ty)}</div></div></div></div><div class="section-label">Margin & Payroll</div><div class="stat-card"><div class="stat-row"><div class="stat-name"><strong>Gross Margin</strong></div><div><div class="stat-val">${fmt$(d.grossMargin.ty)}</div><div class="stat-meta">${fmtPctRaw(d.grossMargin.pct,2)}%</div></div></div><div class="stat-row"><div class="stat-name"><strong>Payroll</strong></div><div><div class="stat-val">${fmt$(d.payroll.ty)}</div></div></div><div class="stat-row"><div class="stat-name"><strong>Profit</strong></div><div><div class="stat-val ${d.profit.ty<0?'delta-neg':'delta-pos'}">${fmt$(d.profit.ty)}</div></div></div></div><div class="section-label">Top 10 Items</div>${d.topItems.map(i=>`<div class="top-item"><div class="rank">#${i.rank}</div><div class="item-name">${i.name}<div style="font-size:11px;color:var(--muted);margin-top:2px">${fmtN(i.units)} units</div></div><div class="item-sales">${fmt$(i.sales)}</div></div>`).join("")}`}return`<div class="section-label">${name} — Last Period (P9)</div><div class="stat-card"><div class="stat-row"><div class="stat-name"><strong>Sales</strong></div><div><div class="stat-val big">${fmt$(d.sales.ty)}</div><div class="stat-meta ${deltaClass(d.sales.varLY)}">${arrow(d.sales.varLY)} ${fmtPctRaw(d.sales.varLY,2)} vs LY</div></div></div><div class="stat-row"><div class="stat-name"><strong>YTD Sales</strong></div><div><div class="stat-val">${fmt$(d.ytdSales.ty)}</div></div></div></div><div class="section-label">Margin</div><div class="stat-card"><div class="stat-row"><div class="stat-name"><strong>Net Margin</strong></div><div><div class="stat-val">${fmt$(d.netMargin.ty)}</div><div class="stat-meta">${fmtPctRaw(d.netMargin.pct,2)}%</div></div></div>${d.payroll.ty!==0?`<div class="stat-row"><div class="stat-name"><strong>Payroll</strong></div><div><div class="stat-val">${fmt$(d.payroll.ty)}</div></div></div>`:''}<div class="stat-row"><div class="stat-name"><strong>D&D</strong></div><div><div class="stat-val ${d.dd.ty<0?'delta-neg':''}">${fmt$(d.dd.ty)}</div></div></div></div><div class="section-label">Top 10 Items</div>${d.topItems.map(i=>`<div class="top-item"><div class="rank">#${i.rank}</div><div class="item-name">${i.name}<div style="font-size:11px;color:var(--muted);margin-top:2px">${fmtN(i.units)} units</div></div><div class="item-sales">${fmt$(i.sales)}</div></div>`).join("")}`}
+
+function buildSearchIndex(){
+const idx=[];const s=DATA.sales;
+idx.push({k:["yesterday","daily"],l:"Total Sales — Yesterday",v:fmt$full(s.daily.ty),s:`${fmtPct(s.daily.inc)} vs LY`});
+idx.push({k:["wtd","running"],l:"Total Sales — Running Wk",v:fmt$full(s.wtd.ty),s:`${fmtPct(s.wtd.inc)} vs LY`});
+idx.push({k:["ytd","year"],l:"Total Sales — YTD",v:fmt$full(s.ytd.ty),s:`${fmtPct(s.ytd.inc)} vs LY`});
+idx.push({k:["traffic"],l:"Traffic — Yesterday",v:fmtN(s.traffic.daily.ty),s:`${fmtPct(s.traffic.daily.inc)} vs LY`});
+idx.push({k:["avg sale","basket"],l:"Avg Sale — Yesterday",v:"$"+s.avgSales.daily.ty,s:`${fmtPct(s.avgSales.daily.inc)} vs LY`});
+const w=DATA.lastWeek.weekly;
+idx.push({k:["last week","lw"],l:"Last Week Total",v:fmt$full(w.totalSales.actual),s:`Plan ${fmt$(w.totalSales.plan)}`});
+idx.push({k:["last week wage"],l:"Last Week Avg Wage",v:"$"+w.avgWage.actual.toFixed(2),s:`LY $${w.avgWage.ly.toFixed(2)}`});
+const lp=DATA.lastPeriod;
+idx.push({k:["last period","p9"],l:"Last Period Profit",v:fmt$full(lp.profit.total.ty),s:`${fmtPctRaw(lp.profit.total.varLY,1)}% vs LY`});
+const p=DATA.payroll;
+idx.push({k:["wage","avg wage"],l:"Avg Wage (WTD)",v:"$"+p.avgWage.toFixed(2),s:""});
+idx.push({k:["payroll %","merch pay"],l:"Merch Payroll %",v:fmtPctRaw(p.pctActual*100,2),s:`Plan ${fmtPctRaw(p.pctPlan*100,2)}`});
+idx.push({k:["ot","overtime"],l:"OT Hours",v:p.otActual.toFixed(2),s:""});
+idx.push({k:["hours to cut"],l:"Hours to Cut",v:fmtN(p.hoursToCut),s:"to hit merch pay%"});
+idx.push({k:["productivity"],l:"Productivity",v:"$"+p.productivity,s:"per hour"});
+const m=DATA.membership;
+idx.push({k:["signups"],l:"Signups+React PTD",v:fmtN(m.ptd.total.ty),s:`${fmtPct(m.ptd.total.inc)} vs LY`});
+idx.push({k:["exec upgrades"],l:"Exec Upgrades PTD",v:fmtN(m.ptd.execUpgrades.ty),s:""});
+idx.push({k:["nmar"],l:"New Member Exec %",v:fmtPct(m.ptd.newMemberExecPct.ty),s:""});
+idx.push({k:["ft","full time"],l:"Full Time",v:m.ftpt.ft,s:fmtPct(m.ftpt.ftPct)});
+idx.push({k:["pt","part time"],l:"Part Time",v:m.ftpt.pt,s:fmtPct(m.ftpt.ptPct)});
+const f=DATA.fresh;
+idx.push({k:["meat"],l:"Meat Sales (P9)",v:fmt$full(f.meat.sales.ty),s:`${fmtPctRaw(f.meat.sales.varLY,1)}% vs LY`});
+idx.push({k:["bakery"],l:"Bakery Sales (P9)",v:fmt$full(f.bakery.sales.ty),s:`${fmtPctRaw(f.bakery.sales.varLY,1)}% vs LY`});
+idx.push({k:["deli","service deli"],l:"Deli Sales (P9)",v:fmt$full(f.deli.sales.ty),s:`${fmtPctRaw(f.deli.sales.varLY,1)}% vs LY`});
+idx.push({k:["produce"],l:"Produce Sales (P9)",v:fmt$full(f.produce.sales.ty),s:`${fmtPctRaw(f.produce.sales.varLY,1)}% vs LY`});
+idx.push({k:["food court","fc"],l:"Food Court Sales (P9)",v:fmt$full(f.foodCourt.sales.ty),s:`${fmtPctRaw(f.foodCourt.sales.varLY,1)}% vs LY`});
+DATA.departments.forEach(d=>{idx.push({k:[d.name.toLowerCase(),d.code],l:`${d.code} ${d.name} PTD`,v:fmt$full(d.ptd),s:`${fmtPct(d.ptdInc)} vs LY · YTD ${fmt$(d.ytd)}`})});
+Object.entries(DATA.categories).forEach(([group,cats])=>{cats.forEach(c=>{const name=c.n.trim();idx.push({k:[name.toLowerCase()],l:`${name}`,v:fmt$full(c.wtd),s:`WTD · ${fmtPct(c.wtdI,1)} vs LY · OH ${fmtN(c.oh||0)}`})})});
+const a=DATA.ancillary;
+idx.push({k:["pharmacy","rx"],l:"Pharmacy Rx (P9)",v:fmt$full(a.pharmRx.sales),s:`Profit ${fmt$(a.pharmRx.profit)}`});
+idx.push({k:["pharm otc","otc"],l:"Pharmacy OTC (P9)",v:fmt$full(a.pharmOtc.sales),s:`Profit ${fmt$(a.pharmOtc.profit)}`});
+idx.push({k:["optical"],l:"Optical (P9)",v:fmt$full(a.optical.sales),s:`Profit ${fmt$(a.optical.profit)}`});
+idx.push({k:["hearing"],l:"Hearing Aids (P9)",v:fmt$full(a.hearing.sales),s:`Profit ${fmt$(a.hearing.profit)}`});
+return idx;
 }
 
-function buildSearchIndex() {
-  const idx = [];
-  const s = DATA.sales;
-  idx.push({keys:["yesterday","daily","today"],label:"Total Sales — Yesterday",value:fmt$full(s.daily.ty),sub:`${fmtPct(s.daily.inc)} vs LY`});
-  idx.push({keys:["wtd","week to date","running"],label:"Total Sales — Running Wk",value:fmt$full(s.wtd.ty),sub:`${fmtPct(s.wtd.inc)} vs LY`});
-  idx.push({keys:["ptd","period"],label:"Total Sales — PTD",value:fmt$full(s.ptd.ty),sub:`${fmtPct(s.ptd.inc)} vs LY`});
-  idx.push({keys:["ytd","year"],label:"Total Sales — YTD",value:fmt$full(s.ytd.ty),sub:`${fmtPct(s.ytd.inc)} vs LY`});
-  idx.push({keys:["merch"],label:"Merch Sales — YTD",value:fmt$full(s.merch.ytd.ty),sub:`${fmtPct(s.merch.ytd.inc)} vs LY`});
-  idx.push({keys:["gas","gasoline"],label:"Gas Sales — YTD",value:fmt$full(s.gas.ytd.ty),sub:`${fmtPct(s.gas.ytd.inc)} vs LY`});
-  idx.push({keys:["traffic"],label:"Traffic — Yesterday",value:fmtN(s.traffic.daily.ty),sub:`${fmtPct(s.traffic.daily.inc)} vs LY`});
-  idx.push({keys:["avg sale","basket"],label:"Avg Sale — Yesterday",value:"$"+s.avgSales.daily.ty,sub:`${fmtPct(s.avgSales.daily.inc)} vs LY`});
-  const w = DATA.lastWeek.weekly;
-  idx.push({keys:["last week","lw"],label:"Last Week Total",value:fmt$full(w.totalSales.actual),sub:`Plan ${fmt$(w.totalSales.plan)}`});
-  idx.push({keys:["last week hours"],label:"Last Week Hours",value:fmtN(w.hours.actual,0),sub:`Sch ${fmtN(w.hours.schedule,0)}`});
-  idx.push({keys:["last week wage"],label:"Last Week Avg Wage",value:"$"+w.avgWage.actual.toFixed(2),sub:`LY $${w.avgWage.ly.toFixed(2)}`});
-  const lp = DATA.lastPeriod;
-  idx.push({keys:["last period","lp","p9"],label:"Last Period Profit",value:fmt$full(lp.profit.total.ty),sub:`${fmtPctRaw(lp.profit.total.varLY,1)}% vs LY`});
-  idx.push({keys:["last period sales"],label:"Last Period Warehouse Sales",value:fmt$full(lp.sales.warehouse.ty),sub:`${fmtPctRaw(lp.sales.warehouse.varLYPct,1)}% vs LY`});
-  idx.push({keys:["last period merch"],label:"Last Period Merch Sales",value:fmt$full(lp.sales.merch.ty),sub:`${fmtPctRaw(lp.sales.merch.varLYPct,1)}% vs LY`});
-  idx.push({keys:["last period controllable"],label:"Last Period Controllable Profit",value:fmt$full(lp.profit.controllable.ty),sub:`${fmtPctRaw(lp.profit.controllable.varLY,1)}% vs LY`});
-  const p = DATA.payroll;
-  idx.push({keys:["wage","avg wage"],label:"Avg Wage (WTD)",value:"$"+p.avgWage.toFixed(2),sub:""});
-  idx.push({keys:["payroll %","wage %","merch pay","merch payroll"],label:"Merch Payroll %",value:fmtPctRaw(p.pctActual*100,2),sub:`Plan ${fmtPctRaw(p.pctPlan*100,2)}`});
-  idx.push({keys:["ot","overtime"],label:"OT Hours",value:p.otActual.toFixed(2),sub:""});
-  idx.push({keys:["hours actual"],label:"Hours Actual WTD",value:fmtN(p.hoursActual),sub:`Sch ${fmtN(p.hoursSchedule)}`});
-  idx.push({keys:["hours to cut"],label:"Hours to Cut",value:fmtN(p.hoursToCut),sub:"to hit merch pay%"});
-  idx.push({keys:["productivity"],label:"Productivity",value:"$"+p.productivity,sub:"sales per hour"});
-  const m = DATA.membership;
-  idx.push({keys:["signups"],label:"Signups+React — PTD",value:fmtN(m.ptd.total.ty),sub:`${fmtPct(m.ptd.total.inc)} vs LY`});
-  idx.push({keys:["exec upgrades"],label:"Exec Upgrades — PTD",value:fmtN(m.ptd.execUpgrades.ty),sub:""});
-  idx.push({keys:["nmar"],label:"New Member Exec %",value:fmtPct(m.ptd.newMemberExecPct.ty),sub:""});
-  idx.push({keys:["triple play"],label:"Triple Play",value:fmtPct(m.ptd.triplePlay.ty),sub:""});
-  idx.push({keys:["credit card","cc apps"],label:"Credit Card Apps",value:fmtN(m.ptd.creditCardApps.ty),sub:""});
-  idx.push({keys:["ft","full time"],label:"Full Time Count",value:m.ftpt.ft,sub:fmtPct(m.ftpt.ftPct)});
-  idx.push({keys:["pt","part time"],label:"Part Time Count",value:m.ftpt.pt,sub:fmtPct(m.ftpt.ptPct)});
-  const f = DATA.fresh;
-  idx.push({keys:["fresh"],label:"Fresh Total Sales (P9)",value:fmt$full(f.total.sales.ty),sub:`${fmtPctRaw(f.total.sales.varLY,1)}% vs LY`});
-  idx.push({keys:["meat"],label:"Meat Sales (P9)",value:fmt$full(f.meat.sales.ty),sub:`${fmtPctRaw(f.meat.sales.varLY,1)}% vs LY`});
-  idx.push({keys:["bakery"],label:"Bakery Sales (P9)",value:fmt$full(f.bakery.sales.ty),sub:`${fmtPctRaw(f.bakery.sales.varLY,1)}% vs LY`});
-  idx.push({keys:["deli","service deli"],label:"Deli Sales (P9)",value:fmt$full(f.deli.sales.ty),sub:`${fmtPctRaw(f.deli.sales.varLY,1)}% vs LY`});
-  idx.push({keys:["produce"],label:"Produce Sales (P9)",value:fmt$full(f.produce.sales.ty),sub:`${fmtPctRaw(f.produce.sales.varLY,1)}% vs LY`});
-  idx.push({keys:["food court","fc"],label:"Food Court Sales (P9)",value:fmt$full(f.foodCourt.sales.ty),sub:`${fmtPctRaw(f.foodCourt.sales.varLY,1)}% vs LY`});
-  DATA.departments.forEach(d => {
-    const lname = d.name.toLowerCase();
-    idx.push({keys:[lname,d.code,"dept "+d.code,"dept "+lname],label:`${d.code} ${d.name} — PTD`,value:fmt$full(d.ptd),sub:`${fmtPct(d.ptdInc)} vs LY · YTD ${fmt$(d.ytd)}`});
-  });
-  const a = DATA.ancillary;
-  idx.push({keys:["pharmacy","rx"],label:"Pharmacy Rx (P9)",value:fmt$full(a.pharmRx.sales),sub:`Profit ${fmt$(a.pharmRx.profit)}`});
-  idx.push({keys:["pharm otc","otc"],label:"Pharmacy OTC (P9)",value:fmt$full(a.pharmOtc.sales),sub:`Profit ${fmt$(a.pharmOtc.profit)}`});
-  idx.push({keys:["optical"],label:"Optical (P9)",value:fmt$full(a.optical.sales),sub:`Profit ${fmt$(a.optical.profit)}`});
-  idx.push({keys:["hearing"],label:"Hearing Aids (P9)",value:fmt$full(a.hearing.sales),sub:`Profit ${fmt$(a.hearing.profit)}`});
-  return idx;
+const searchIndex=buildSearchIndex();
+
+function doSearch(q){q=q.toLowerCase().trim();if(!q)return[];const toks=q.split(/\s+/);const m=searchIndex.filter(i=>toks.every(t=>i.k.some(k=>k.includes(t))||i.l.toLowerCase().includes(t)));m.sort((a,b)=>{const aS=a.k.some(k=>k.startsWith(q))||a.l.toLowerCase().startsWith(q);const bS=b.k.some(k=>k.startsWith(q))||b.l.toLowerCase().startsWith(q);if(aS&&!bS)return-1;if(bS&&!aS)return 1;return a.l.length-b.l.length});return m.slice(0,12)}
+
+document.getElementById("dataAsOf").innerHTML=`Dash ${DATA.asOfDashboard} · PARIS ${DATA.asOfParis}<br>P&L ${DATA.asOfFinancial} · Cat ${DATA.asOfCategories}`;
+
+document.querySelectorAll(".tile").forEach(t=>{t.addEventListener("click",()=>{renderPanel(t.dataset.panel);document.getElementById("panelView").classList.add("active");setTimeout(attach,30)})});
+document.getElementById("backBtn").addEventListener("click",()=>{document.getElementById("panelView").classList.remove("active")});
+
+function attach(){
+const mT=document.getElementById("memToggle");
+if(mT){mT.querySelectorAll(".toggle").forEach(t=>{t.addEventListener("click",()=>{mT.querySelectorAll(".toggle").forEach(x=>x.classList.remove("active"));t.classList.add("active");document.getElementById("memContent").innerHTML=memPer(t.dataset.period)})})}
+const dT=document.getElementById("deptToggle");
+if(dT){dT.querySelectorAll(".toggle").forEach(t=>{t.addEventListener("click",()=>{dT.querySelectorAll(".toggle").forEach(x=>x.classList.remove("active"));t.classList.add("active");document.getElementById("deptList").innerHTML=deptList(t.dataset.period)})})}
+const fT=document.getElementById("freshToggle");
+if(fT){fT.querySelectorAll(".toggle").forEach(t=>{t.addEventListener("click",()=>{fT.querySelectorAll(".toggle").forEach(x=>x.classList.remove("active"));t.classList.add("active");document.getElementById("freshContent").innerHTML=freshContent(t.dataset.cat)})})}
+const cT=document.getElementById("catToggle");
+if(cT){cT.querySelectorAll(".toggle").forEach(t=>{t.addEventListener("click",()=>{catState.period=t.dataset.period;cT.querySelectorAll(".toggle").forEach(x=>x.classList.remove("active"));t.classList.add("active");document.getElementById("catContent").innerHTML=catGroupList();attachCatGroups()})});attachCatGroups()}
 }
 
-const searchIndex = buildSearchIndex();
-function search(q) {
-  q = q.toLowerCase().trim();
-  if (!q) return [];
-  const tokens = q.split(/\s+/);
-  const matches = searchIndex.filter(item => tokens.every(t => item.keys.some(k => k.includes(t)) || item.label.toLowerCase().includes(t)));
-  matches.sort((a,b) => {
-    const aS = a.keys.some(k=>k.startsWith(q)) || a.label.toLowerCase().startsWith(q);
-    const bS = b.keys.some(k=>k.startsWith(q)) || b.label.toLowerCase().startsWith(q);
-    if (aS && !bS) return -1;
-    if (bS && !aS) return 1;
-    return a.label.length - b.label.length;
-  });
-  return matches.slice(0, 12);
+function attachCatGroups(){
+document.querySelectorAll(".cat-group").forEach(g=>{g.addEventListener("click",()=>{const gn=g.dataset.group;catState.expanded=catState.expanded===gn?null:gn;document.getElementById("catContent").innerHTML=catGroupList();attachCatGroups()})})
 }
 
-document.getElementById("dataAsOf").innerHTML = `Dash ${DATA.asOfDashboard} · PARIS ${DATA.asOfParis}<br>P&L ${DATA.asOfFinancial}`;
-document.querySelectorAll(".tile").forEach(t => {
-  t.addEventListener("click", () => {
-    renderPanel(t.dataset.panel);
-    document.getElementById("panelView").classList.add("active");
-    setTimeout(attachPanelInteractions, 30);
-  });
-});
-document.getElementById("backBtn").addEventListener("click", () => { document.getElementById("panelView").classList.remove("active"); });
-
-function attachPanelInteractions() {
-  const memToggle = document.getElementById("memToggle");
-  if (memToggle) { memToggle.querySelectorAll(".toggle").forEach(t => { t.addEventListener("click", () => { memToggle.querySelectorAll(".toggle").forEach(x => x.classList.remove("active")); t.classList.add("active"); document.getElementById("memContent").innerHTML = membershipPeriod(t.dataset.period); }); }); }
-  const deptToggle = document.getElementById("deptToggle");
-  if (deptToggle) { deptToggle.querySelectorAll(".toggle").forEach(t => { t.addEventListener("click", () => { deptToggle.querySelectorAll(".toggle").forEach(x => x.classList.remove("active")); t.classList.add("active"); document.getElementById("deptList").innerHTML = deptList(t.dataset.period); }); }); }
-  const freshToggle = document.getElementById("freshToggle");
-  if (freshToggle) { freshToggle.querySelectorAll(".toggle").forEach(t => { t.addEventListener("click", () => { freshToggle.querySelectorAll(".toggle").forEach(x => x.classList.remove("active")); t.classList.add("active"); document.getElementById("freshContent").innerHTML = freshContent(t.dataset.cat); }); }); }
-}
-
-const searchEl = document.getElementById("search");
-const resultsEl = document.getElementById("results");
-searchEl.addEventListener("input", () => {
-  const q = searchEl.value;
-  if (!q.trim()) { resultsEl.classList.remove("active"); resultsEl.innerHTML = ""; return; }
-  const matches = search(q);
-  if (matches.length === 0) { resultsEl.innerHTML = '<div class="empty">No matches.</div>'; }
-  else { resultsEl.innerHTML = matches.map(m => `<div class="result"><div class="result-label"><strong>${m.label}</strong>${m.sub?`<span style="font-size:12px;color:var(--muted)">${m.sub}</span>`:''}</div><div class="result-value">${m.value}</div></div>`).join(""); }
-  resultsEl.classList.add("active");
-});
-searchEl.addEventListener("focus", () => { if (searchEl.value.trim()) resultsEl.classList.add("active"); });
+const searchEl=document.getElementById("search"),resultsEl=document.getElementById("results");
+searchEl.addEventListener("input",()=>{const q=searchEl.value;if(!q.trim()){resultsEl.classList.remove("active");resultsEl.innerHTML="";return}const m=doSearch(q);if(m.length===0){resultsEl.innerHTML='<div class="empty">No matches.</div>'}else{resultsEl.innerHTML=m.map(x=>`<div class="result"><div class="result-label"><strong>${x.l}</strong>${x.s?`<span style="font-size:12px;color:var(--muted)">${x.s}</span>`:''}</div><div class="result-value">${x.v}</div></div>`).join("")}resultsEl.classList.add("active")});
+searchEl.addEventListener("focus",()=>{if(searchEl.value.trim())resultsEl.classList.add("active")});
 </script>
 </body>
 </html>
