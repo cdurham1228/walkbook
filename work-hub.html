@@ -273,6 +273,7 @@
   <div class="safety-toolbar">
     <button class="safety-btn" onclick="document.getElementById('pdfFile').click()">UPLOAD PDF REPORT</button>
     <button class="safety-btn secondary" onclick="exportSafetyCSV()">EXPORT CSV</button>
+    <button class="safety-btn secondary" onclick="showDebugText()">DEBUG PDF TEXT</button>
     <input type="file" id="pdfFile" accept="application/pdf" style="display:none" onchange="handlePDFUpload(event)">
   </div>
   <div id="reportMeta"></div>
@@ -334,8 +335,8 @@
   </div>
   <div class="section-title" style="margin-top:24px;">VERSION</div>
   <div class="settings-row">
-    <h3>Work Hub v2.0</h3>
-    <p>Costco University PDF parser + email composer. Multi-device sync coming in v3.</p>
+    <h3>Work Hub v2.1</h3>
+    <p>Improved PDF parser (flat-text regex) + DEBUG PDF TEXT button. Multi-device sync coming in v3.</p>
   </div>
 </section>
 
@@ -412,39 +413,29 @@
     try {
       const arrayBuffer = await file.arrayBuffer();
       const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-      const allRows = [];
+      let fullText = '';
       let createdDate = null;
       let location = null;
 
+      // Extract ALL text from ALL pages as one flat stream
       for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
         document.getElementById('loadingText').textContent = `PAGE ${pageNum}/${pdf.numPages}...`;
         const page = await pdf.getPage(pageNum);
         const content = await page.getTextContent();
-        const rowsByY = {};
-        for (const item of content.items) {
-          if (!item.str.trim()) continue;
-          const y = Math.round(item.transform[5]);
-          const x = item.transform[4];
-          if (!rowsByY[y]) rowsByY[y] = [];
-          rowsByY[y].push({ x, text: item.str });
-        }
-        const sortedYs = Object.keys(rowsByY).map(Number).sort((a, b) => b - a);
-        for (const y of sortedYs) {
-          const cells = rowsByY[y].sort((a, b) => a.x - b.x);
-          const lineText = cells.map(c => c.text).join(' ');
-          if (!createdDate) {
-            const dateMatch = lineText.match(/Created Date\s*:\s*([A-Za-z]+\s+\d+,?\s*\d{4})/);
-            if (dateMatch) createdDate = dateMatch[1];
-          }
-          if (!location) {
-            const locMatch = lineText.match(/Primary Location\s*:\s*([\d\s\-A-Z]+?)(?:Department|$)/);
-            if (locMatch) location = locMatch[1].trim();
-          }
-          allRows.push({ y, cells, text: lineText });
-        }
+        const pageText = content.items.map(it => it.str).join(' ');
+        fullText += pageText + ' ';
       }
 
-      const parsed = parseRows(allRows);
+      fullText = fullText.replace(/\s+/g, ' ').trim();
+      window._lastPdfText = fullText;
+
+      const cdMatch = fullText.match(/Created Date\s*:\s*([A-Za-z]+\s+\d+,?\s*\d{4})/);
+      if (cdMatch) createdDate = cdMatch[1];
+      const locMatch = fullText.match(/Primary Location\s*:\s*([\d]+\s*-\s*[A-Z][A-Z\s]*?)(?:\s+Department|\s+Employee)/);
+      if (locMatch) location = locMatch[1].trim();
+
+      const parsed = parseFullText(fullText);
+
       safetyReport = {
         createdDate, location, uploadedAt: Date.now(),
         departments: parsed,
@@ -454,7 +445,13 @@
       saveSafety();
       document.getElementById('loading').classList.remove('active');
       event.target.value = '';
-      alert(`Report imported.\n${safetyReport.totalEmployees} employees · ${safetyReport.totalTrainings} trainings · ${Object.keys(parsed).length} departments`);
+
+      const totalT = safetyReport.totalTrainings;
+      if (totalT === 0) {
+        alert(`Report imported but 0 trainings were parsed.\n\nTap "DEBUG PDF TEXT" below to see what was extracted, then share it so the parser can be fixed.`);
+      } else {
+        alert(`Report imported.\n${safetyReport.totalEmployees} employees · ${totalT} trainings · ${Object.keys(parsed).length} departments`);
+      }
     } catch (err) {
       console.error(err);
       document.getElementById('loading').classList.remove('active');
@@ -462,28 +459,106 @@
     }
   }
 
-  function parseRows(rows) {
+  window.showDebugText = function() {
+    const txt = window._lastPdfText || 'No PDF has been uploaded yet in this session.';
+    const inner = document.getElementById('detailModalInner');
+    inner.innerHTML = `
+      <div class="modal-title">Raw PDF Text</div>
+      <div class="modal-sub">Copy this and share so the parser can be fixed</div>
+      <textarea class="modal-input" style="height:50vh;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.4" readonly>${escapeHTML(txt)}</textarea>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal()">CLOSE</button>
+        <button class="btn btn-primary" onclick="navigator.clipboard.writeText(window._lastPdfText || '').then(()=>alert('Copied'))">COPY</button>
+      </div>
+    `;
+    document.getElementById('detailModal').classList.add('active');
+  };
+
+  function parseFullText(text) {
     const departments = {};
-    let currentDept = null;
-    let inDataRows = false;
-    for (const row of rows) {
-      const text = row.text;
-      const deptMatch = text.match(/Department\s*:\s*(\S+)/);
-      if (deptMatch) {
-        currentDept = deptMatch[1];
-        if (!departments[currentDept]) departments[currentDept] = [];
-        inDataRows = false;
-        continue;
+    const deptSplits = text.split(/Department\s*:\s*/);
+    for (let i = 1; i < deptSplits.length; i++) {
+      const chunk = deptSplits[i];
+      const deptMatch = chunk.match(/^(\S+)/);
+      if (!deptMatch) continue;
+      const deptName = deptMatch[1];
+      if (!departments[deptName]) departments[deptName] = [];
+
+      const dueDateRegex = /([A-Z][a-z]{2})\s+(\d{1,2}),?\s+(\d{4})\s+(-?\d{1,4})\b/g;
+      let lastEnd = 0;
+      const rowSpans = [];
+      let m;
+      while ((m = dueDateRegex.exec(chunk)) !== null) {
+        rowSpans.push({
+          start: lastEnd,
+          end: m.index + m[0].length,
+          month: m[1], day: m[2], year: m[3],
+          daysRem: parseInt(m[4]),
+          dueDateStr: `${m[1]} ${m[2]}, ${m[3]}`
+        });
+        lastEnd = m.index + m[0].length;
       }
-      if (text.match(/Employee.*Hire.*Job.*Activity.*Due Date/i) || text.match(/Employee\s+Hire Date\s+Job/i)) {
-        inDataRows = true;
-        continue;
+
+      for (const span of rowSpans) {
+        const rowText = chunk.slice(span.start, span.end).trim();
+        const parsed = parseRowText(rowText, span);
+        if (parsed) departments[deptName].push(parsed);
       }
-      if (!currentDept || !inDataRows) continue;
-      const parsed = parseEmployeeRow(row.cells);
-      if (parsed) departments[currentDept].push(parsed);
+
+      if (departments[deptName].length === 0) delete departments[deptName];
     }
     return departments;
+  }
+
+  function parseRowText(rowText, span) {
+    const trailing = `${span.month} ${span.day}, ${span.year} ${span.daysRem}`;
+    const idx = rowText.lastIndexOf(trailing);
+    if (idx === -1) return null;
+    let prefix = rowText.slice(0, idx).trim();
+
+    // Strip header/junk content
+    prefix = prefix.replace(/^.*?(?:Employee\s+Hire\s+Date\s+Job\s+Classification\s+Job\s+Title\s+Req\.\s+By\s+Activity\s+Name\s+Due\s+Date\s+Days(?:\s+Rem\.?)?)\s*/i, '').trim();
+    prefix = prefix.replace(/Days until due date\s*:\s*\d+/i, '').trim();
+    prefix = prefix.replace(/Created Date\s*:\s*[A-Za-z]+\s+\d+,?\s*\d{4}/, '').trim();
+    prefix = prefix.replace(/Primary Location\s*:\s*[\d\s\-A-Z]+/, '').trim();
+    prefix = prefix.replace(/Incomplete Required Training[^A-Z]*/, '').trim();
+
+    const reqMatch = prefix.match(/\b(Policy|Legal)\b/);
+    if (!reqMatch) return null;
+    const reqBy = reqMatch[1];
+    const beforeReq = prefix.slice(0, reqMatch.index).trim();
+    const activity = prefix.slice(reqMatch.index + reqBy.length).trim();
+    if (!activity) return null;
+
+    const nums = [...beforeReq.matchAll(/\b\d{4}\b/g)];
+    let name, hireYear = '', jobClass = '', jobTitle = '';
+    if (nums.length >= 2) {
+      const first = nums[0], second = nums[1];
+      name = beforeReq.slice(0, first.index).trim();
+      hireYear = first[0];
+      jobClass = second[0];
+      jobTitle = beforeReq.slice(second.index + 4).trim();
+    } else if (nums.length === 1) {
+      const first = nums[0];
+      name = beforeReq.slice(0, first.index).trim();
+      hireYear = first[0];
+      jobTitle = beforeReq.slice(first.index + 4).trim();
+    } else {
+      name = beforeReq;
+    }
+
+    name = name.replace(/^[^A-Za-z]+/, '').replace(/\s+/g, ' ').trim();
+    if (!name || name.length < 2) return null;
+    if (!/[A-Za-z]/.test(name)) return null;
+
+    const dueDate = new Date(`${span.month} ${span.day}, ${span.year}`);
+
+    return {
+      name, hireYear, jobClass, jobTitle, reqBy, activity,
+      dueDate: isNaN(dueDate) ? null : dueDate.toISOString().slice(0, 10),
+      dueDateDisplay: span.dueDateStr,
+      daysRemaining: span.daysRem
+    };
   }
 
   function parseEmployeeRow(cells) {
