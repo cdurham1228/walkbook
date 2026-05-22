@@ -335,8 +335,8 @@
   </div>
   <div class="section-title" style="margin-top:24px;">VERSION</div>
   <div class="settings-row">
-    <h3>Work Hub v2.1</h3>
-    <p>Improved PDF parser (flat-text regex) + DEBUG PDF TEXT button. Multi-device sync coming in v3.</p>
+    <h3>Work Hub v2.2</h3>
+    <p>Persistent debug text storage. Multi-device sync coming in v3.</p>
   </div>
 </section>
 
@@ -428,6 +428,7 @@
 
       fullText = fullText.replace(/\s+/g, ' ').trim();
       window._lastPdfText = fullText;
+      try { localStorage.setItem('workhub_lastPdfText', fullText); } catch(e) {}
 
       const cdMatch = fullText.match(/Created Date\s*:\s*([A-Za-z]+\s+\d+,?\s*\d{4})/);
       if (cdMatch) createdDate = cdMatch[1];
@@ -460,11 +461,12 @@
   }
 
   window.showDebugText = function() {
-    const txt = window._lastPdfText || 'No PDF has been uploaded yet in this session.';
+    const txt = window._lastPdfText || localStorage.getItem('workhub_lastPdfText') || 'No PDF has been uploaded yet in this session.';
+    window._lastPdfText = txt;
     const inner = document.getElementById('detailModalInner');
     inner.innerHTML = `
       <div class="modal-title">Raw PDF Text</div>
-      <div class="modal-sub">Copy this and share so the parser can be fixed</div>
+      <div class="modal-sub">${txt.length} chars · Copy and share so the parser can be fixed</div>
       <textarea class="modal-input" style="height:50vh;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.4" readonly>${escapeHTML(txt)}</textarea>
       <div class="modal-actions">
         <button class="btn btn-secondary" onclick="closeModal()">CLOSE</button>
