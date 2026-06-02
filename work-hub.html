@@ -406,8 +406,8 @@
   </div>
   <div class="section-title" style="margin-top:24px;">VERSION</div>
   <div class="settings-row">
-    <h3>Work Hub v3.4</h3>
-    <p>EMAIL ALL DEPTS now sends ONE combined email with all managers in TO and Always-CC list automatically added.</p>
+    <h3>Work Hub v3.5</h3>
+    <p>Cleaner email formatting — box-drawing dividers, status markers, summary header, dept blocks with manager info.</p>
   </div>
 </section>
 
@@ -874,45 +874,35 @@
 
   function buildDeptEmailBody(deptName, urgent) {
     const reportDate = safetyReport.createdDate || 'latest';
-    let body = `Hi,\n\nPer the Required Training report (${reportDate}), the following items in ${deptName} need attention:\n\n`;
+    const total = urgent.overdue.length + urgent.critical.length + urgent.warning.length;
 
-    if (urgent.overdue.length) {
-      body += `OVERDUE (${urgent.overdue.length}):\n`;
-      // Group by employee
+    let body = `Hi,\n\n`;
+    body += `Per the Required Training report (${reportDate}), ${deptName} has ${total} item${total === 1 ? '' : 's'} needing attention:\n\n`;
+
+    const formatTraining = (t, isOverdue) => {
+      const dayPart = isOverdue
+        ? `${Math.abs(t.daysRemaining)}d LATE`
+        : `due in ${t.daysRemaining}d`;
+      return `      • ${t.activity}\n        ${t.dueDateDisplay}  ·  ${dayPart}`;
+    };
+
+    const renderSection = (label, marker, list, isOverdue) => {
+      if (!list.length) return '';
       const byEmp = {};
-      urgent.overdue.forEach(r => { (byEmp[r.name] = byEmp[r.name] || []).push(r); });
+      list.forEach(r => { (byEmp[r.name] = byEmp[r.name] || []).push(r); });
+      let section = `${marker} ${label} (${list.length})\n`;
+      section += `${'─'.repeat(40)}\n`;
       Object.entries(byEmp).forEach(([name, trainings]) => {
-        body += `  ${name}\n`;
-        trainings.forEach(t => {
-          body += `    • ${t.activity} — was due ${t.dueDateDisplay} (${Math.abs(t.daysRemaining)} days late)\n`;
-        });
+        section += `   ${name}\n`;
+        trainings.forEach(t => { section += formatTraining(t, isOverdue) + '\n'; });
       });
-      body += `\n`;
-    }
-    if (urgent.critical.length) {
-      body += `CRITICAL — due within 30 days (${urgent.critical.length}):\n`;
-      const byEmp = {};
-      urgent.critical.forEach(r => { (byEmp[r.name] = byEmp[r.name] || []).push(r); });
-      Object.entries(byEmp).forEach(([name, trainings]) => {
-        body += `  ${name}\n`;
-        trainings.forEach(t => {
-          body += `    • ${t.activity} — due ${t.dueDateDisplay} (${t.daysRemaining}d)\n`;
-        });
-      });
-      body += `\n`;
-    }
-    if (urgent.warning.length) {
-      body += `WARNING — due within 60 days (${urgent.warning.length}):\n`;
-      const byEmp = {};
-      urgent.warning.forEach(r => { (byEmp[r.name] = byEmp[r.name] || []).push(r); });
-      Object.entries(byEmp).forEach(([name, trainings]) => {
-        body += `  ${name}\n`;
-        trainings.forEach(t => {
-          body += `    • ${t.activity} — due ${t.dueDateDisplay} (${t.daysRemaining}d)\n`;
-        });
-      });
-      body += `\n`;
-    }
+      section += '\n';
+      return section;
+    };
+
+    body += renderSection('OVERDUE', '●', urgent.overdue, true);
+    body += renderSection('CRITICAL — within 30 days', '●', urgent.critical, false);
+    body += renderSection('WARNING — within 60 days', '●', urgent.warning, false);
 
     body += `Please follow up with your team to get these completed.\n\nThanks`;
     return body;
@@ -1050,45 +1040,49 @@
     const reportDate = safetyReport.createdDate || 'latest';
     const subject = `Required Training Update — ${sections.length} Department${sections.length === 1 ? '' : 's'} (${reportDate})`;
 
+    const totalOverdue = sections.reduce((s, x) => s + x.urgent.overdue.length, 0);
+    const totalCritical = sections.reduce((s, x) => s + x.urgent.critical.length, 0);
+    const totalWarning = sections.reduce((s, x) => s + x.urgent.warning.length, 0);
+
     let body = `Hi all,\n\n`;
-    body += `Per the latest Required Training report (${reportDate}), the following departments have items needing attention.\n\n`;
+    body += `Per the latest Required Training report (${reportDate}):\n\n`;
+    body += `   ${totalOverdue} OVERDUE  ·  ${totalCritical} CRITICAL (≤30d)  ·  ${totalWarning} WARNING (≤60d)\n`;
+    body += `   Across ${sections.length} department${sections.length === 1 ? '' : 's'}\n\n`;
+    body += `${'━'.repeat(48)}\n\n`;
+
+    const formatTraining = (t, isOverdue) => {
+      const dayPart = isOverdue
+        ? `${Math.abs(t.daysRemaining)}d LATE`
+        : `due in ${t.daysRemaining}d`;
+      return `      • ${t.activity}\n        ${t.dueDateDisplay}  ·  ${dayPart}`;
+    };
+
+    const renderSection = (label, list, isOverdue) => {
+      if (!list.length) return '';
+      const byEmp = {};
+      list.forEach(r => { (byEmp[r.name] = byEmp[r.name] || []).push(r); });
+      let section = `   ● ${label} (${list.length})\n`;
+      Object.entries(byEmp).forEach(([name, trainings]) => {
+        section += `      ${name}\n`;
+        trainings.forEach(t => { section += `         • ${t.activity}  —  ${t.dueDateDisplay}  ·  ${isOverdue ? Math.abs(t.daysRemaining) + 'd LATE' : 'in ' + t.daysRemaining + 'd'}\n`; });
+      });
+      section += '\n';
+      return section;
+    };
 
     sections.forEach((s, idx) => {
-      body += `${'═'.repeat(40)}\n`;
-      body += `${s.deptName}  —  Manager: ${s.manager}\n`;
-      body += `${'═'.repeat(40)}\n`;
-
-      if (s.urgent.overdue.length) {
-        body += `\nOVERDUE (${s.urgent.overdue.length}):\n`;
-        const byEmp = {};
-        s.urgent.overdue.forEach(r => { (byEmp[r.name] = byEmp[r.name] || []).push(r); });
-        Object.entries(byEmp).forEach(([name, ts]) => {
-          body += `  ${name}\n`;
-          ts.forEach(t => { body += `    • ${t.activity} — was due ${t.dueDateDisplay} (${Math.abs(t.daysRemaining)}d late)\n`; });
-        });
-      }
-      if (s.urgent.critical.length) {
-        body += `\nCRITICAL — within 30 days (${s.urgent.critical.length}):\n`;
-        const byEmp = {};
-        s.urgent.critical.forEach(r => { (byEmp[r.name] = byEmp[r.name] || []).push(r); });
-        Object.entries(byEmp).forEach(([name, ts]) => {
-          body += `  ${name}\n`;
-          ts.forEach(t => { body += `    • ${t.activity} — due ${t.dueDateDisplay} (${t.daysRemaining}d)\n`; });
-        });
-      }
-      if (s.urgent.warning.length) {
-        body += `\nWARNING — within 60 days (${s.urgent.warning.length}):\n`;
-        const byEmp = {};
-        s.urgent.warning.forEach(r => { (byEmp[r.name] = byEmp[r.name] || []).push(r); });
-        Object.entries(byEmp).forEach(([name, ts]) => {
-          body += `  ${name}\n`;
-          ts.forEach(t => { body += `    • ${t.activity} — due ${t.dueDateDisplay} (${t.daysRemaining}d)\n`; });
-        });
-      }
-      body += `\n`;
+      const total = s.urgent.overdue.length + s.urgent.critical.length + s.urgent.warning.length;
+      body += `┃ ${s.deptName}  ·  ${total} item${total === 1 ? '' : 's'}\n`;
+      body += `┃ Manager: ${s.manager}\n`;
+      body += `${'─'.repeat(48)}\n\n`;
+      body += renderSection('OVERDUE', s.urgent.overdue, true);
+      body += renderSection('CRITICAL — within 30 days', s.urgent.critical, false);
+      body += renderSection('WARNING — within 60 days', s.urgent.warning, false);
+      if (idx < sections.length - 1) body += `${'━'.repeat(48)}\n\n`;
     });
 
-    body += `Please follow up with your teams to get these completed.\n\nThanks`;
+    body += `${'━'.repeat(48)}\n\n`;
+    body += `Please follow up with your teams to get these completed. Reply with any questions.\n\nThanks`;
 
     const to = toEmails.join(',');
     const cc = alwaysCC.join(',');
