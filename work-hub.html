@@ -130,6 +130,18 @@
     transition: transform 0.2s;
   }
   .dept-chevron.expanded { transform: rotate(90deg); }
+  .dept-email-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--accent);
+    border-radius: 6px;
+    padding: 5px 9px;
+    font-size: 13px;
+    cursor: pointer;
+    line-height: 1;
+  }
+  .dept-email-btn:active { background: var(--accent); color: #000; }
+  .dept-email-btn.has-manager { border-color: var(--accent); }
   .dept-rows-container {
     display: none;
     padding: 8px 0 0;
@@ -319,6 +331,7 @@
     <button class="safety-btn" onclick="document.getElementById('csvFile').click()">UPLOAD CSV / EXCEL</button>
     <button class="safety-btn secondary" onclick="openPasteMode()">PASTE TEXT</button>
     <button class="safety-btn secondary" onclick="document.getElementById('pdfFile').click()">UPLOAD PDF</button>
+    <button class="safety-btn secondary" onclick="openEmailAllDepts()">EMAIL ALL DEPTS</button>
     <button class="safety-btn secondary" onclick="exportSafetyCSV()">EXPORT CSV</button>
     <button class="safety-btn secondary" onclick="showDebugText()">DEBUG</button>
     <input type="file" id="csvFile" accept=".csv,.xlsx,.xls,.tsv,text/csv" style="display:none" onchange="handleCSVUpload(event)">
@@ -357,6 +370,16 @@
     <p>Saved emails are remembered for next time. <span id="contactCount"></span></p>
     <button onclick="viewContacts()">VIEW / EDIT CONTACTS</button>
   </div>
+  <div class="settings-row">
+    <h3>Department Manager Emails</h3>
+    <p>One email per department for the ✉ button on the Safety tab. <span id="deptMgrCount"></span></p>
+    <button onclick="viewDeptManagers()">VIEW / EDIT MANAGERS</button>
+  </div>
+  <div class="settings-row">
+    <h3>Always-CC Emails</h3>
+    <p>These addresses are automatically CC'd on safety emails (boss, safety committee, HR). <span id="alwaysCCCount"></span></p>
+    <button onclick="viewAlwaysCC()">VIEW / EDIT ALWAYS-CC</button>
+  </div>
   <div class="section-title" style="margin-top:24px;">VP WALK BOOK</div>
   <div class="settings-row">
     <h3>Walk Book URL</h3>
@@ -383,8 +406,8 @@
   </div>
   <div class="section-title" style="margin-top:24px;">VERSION</div>
   <div class="settings-row">
-    <h3>Work Hub v3.2</h3>
-    <p>New thresholds (Critical ≤30d, Warning ≤60d), Today dashboard urgency stats, collapsible departments with state memory.</p>
+    <h3>Work Hub v3.4</h3>
+    <p>EMAIL ALL DEPTS now sends ONE combined email with all managers in TO and Always-CC list automatically added.</p>
   </div>
 </section>
 
@@ -407,6 +430,8 @@
   let items = JSON.parse(localStorage.getItem('workhub_items') || '[]');
   let safetyReport = JSON.parse(localStorage.getItem('workhub_safety') || 'null');
   let contacts = JSON.parse(localStorage.getItem('workhub_contacts') || '{}');
+  let deptManagers = JSON.parse(localStorage.getItem('workhub_deptManagers') || '{}');
+  let alwaysCC = JSON.parse(localStorage.getItem('workhub_alwaysCC') || '[]');
   let walkBookUrl = localStorage.getItem('workhub_walkbook') || '';
   let captureType = 'task';
 
@@ -418,6 +443,8 @@
   function saveItems() { localStorage.setItem('workhub_items', JSON.stringify(items)); render(); }
   function saveSafety() { localStorage.setItem('workhub_safety', JSON.stringify(safetyReport)); render(); }
   function saveContacts() { localStorage.setItem('workhub_contacts', JSON.stringify(contacts)); render(); }
+  function saveDeptManagers() { localStorage.setItem('workhub_deptManagers', JSON.stringify(deptManagers)); render(); }
+  function saveAlwaysCC() { localStorage.setItem('workhub_alwaysCC', JSON.stringify(alwaysCC)); render(); }
   function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
   function escapeHTML(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
@@ -836,6 +863,243 @@
     alert(`Imported.\n${safetyReport.totalEmployees} employees · ${totalT} trainings · ${Object.keys(parsed).length} departments`);
   };
 
+  // ===== DEPARTMENT EMAIL =====
+  function getDeptUrgent(deptName) {
+    const rows = (safetyReport && safetyReport.departments[deptName]) || [];
+    const overdue = rows.filter(r => r.daysRemaining <= 0);
+    const critical = rows.filter(r => r.daysRemaining > 0 && r.daysRemaining <= 30);
+    const warning = rows.filter(r => r.daysRemaining > 30 && r.daysRemaining <= 60);
+    return { overdue, critical, warning, hasUrgent: overdue.length + critical.length + warning.length > 0 };
+  }
+
+  function buildDeptEmailBody(deptName, urgent) {
+    const reportDate = safetyReport.createdDate || 'latest';
+    let body = `Hi,\n\nPer the Required Training report (${reportDate}), the following items in ${deptName} need attention:\n\n`;
+
+    if (urgent.overdue.length) {
+      body += `OVERDUE (${urgent.overdue.length}):\n`;
+      // Group by employee
+      const byEmp = {};
+      urgent.overdue.forEach(r => { (byEmp[r.name] = byEmp[r.name] || []).push(r); });
+      Object.entries(byEmp).forEach(([name, trainings]) => {
+        body += `  ${name}\n`;
+        trainings.forEach(t => {
+          body += `    • ${t.activity} — was due ${t.dueDateDisplay} (${Math.abs(t.daysRemaining)} days late)\n`;
+        });
+      });
+      body += `\n`;
+    }
+    if (urgent.critical.length) {
+      body += `CRITICAL — due within 30 days (${urgent.critical.length}):\n`;
+      const byEmp = {};
+      urgent.critical.forEach(r => { (byEmp[r.name] = byEmp[r.name] || []).push(r); });
+      Object.entries(byEmp).forEach(([name, trainings]) => {
+        body += `  ${name}\n`;
+        trainings.forEach(t => {
+          body += `    • ${t.activity} — due ${t.dueDateDisplay} (${t.daysRemaining}d)\n`;
+        });
+      });
+      body += `\n`;
+    }
+    if (urgent.warning.length) {
+      body += `WARNING — due within 60 days (${urgent.warning.length}):\n`;
+      const byEmp = {};
+      urgent.warning.forEach(r => { (byEmp[r.name] = byEmp[r.name] || []).push(r); });
+      Object.entries(byEmp).forEach(([name, trainings]) => {
+        body += `  ${name}\n`;
+        trainings.forEach(t => {
+          body += `    • ${t.activity} — due ${t.dueDateDisplay} (${t.daysRemaining}d)\n`;
+        });
+      });
+      body += `\n`;
+    }
+
+    body += `Please follow up with your team to get these completed.\n\nThanks`;
+    return body;
+  }
+
+  window.openDeptEmail = function(deptName) {
+    if (!safetyReport) return;
+    const urgent = getDeptUrgent(deptName);
+    const managerEmail = deptManagers[deptName] || '';
+    const inner = document.getElementById('detailModalInner');
+
+    const totalUrgent = urgent.overdue.length + urgent.critical.length + urgent.warning.length;
+
+    inner.innerHTML = `
+      <div class="modal-title">${escapeHTML(deptName)}</div>
+      <div class="modal-sub">${urgent.overdue.length} OVERDUE · ${urgent.critical.length} CRITICAL · ${urgent.warning.length} WARNING</div>
+
+      <div class="modal-field">
+        <label class="modal-label">Department Manager Email</label>
+        <input type="email" class="modal-input" id="deptManagerEmail" value="${escapeHTML(managerEmail)}" placeholder="manager.name@costco.com" autocapitalize="off" autocorrect="off">
+      </div>
+
+      <div class="modal-field">
+        <label class="modal-label">Subject Line</label>
+        <input type="text" class="modal-input" id="deptEmailSubject" value="Required Training - ${escapeHTML(deptName)} Update Needed">
+      </div>
+
+      ${totalUrgent === 0
+        ? '<div class="empty" style="padding:20px 0"><div class="empty-sub">No urgent items in this department.</div></div>'
+        : `<div class="modal-label" style="margin-top:14px;">Email Preview</div>
+           <textarea class="modal-input" id="deptEmailBody" style="height:30vh;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.4">${escapeHTML(buildDeptEmailBody(deptName, urgent))}</textarea>`}
+
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal()">CANCEL</button>
+        <button class="btn btn-primary" data-dept="${escapeHTML(deptName)}" onclick="sendDeptEmail(this.dataset.dept)">${totalUrgent === 0 ? 'SAVE EMAIL' : 'OPEN MAIL'}</button>
+      </div>
+    `;
+    document.getElementById('detailModal').classList.add('active');
+  };
+
+  window.sendDeptEmail = function(deptName) {
+    const email = document.getElementById('deptManagerEmail').value.trim();
+    const subject = document.getElementById('deptEmailSubject').value.trim();
+    const bodyField = document.getElementById('deptEmailBody');
+    const body = bodyField ? bodyField.value : '';
+
+    if (email) {
+      deptManagers[deptName] = email;
+      saveDeptManagers();
+    }
+
+    if (!body) {
+      closeModal();
+      alert('Email address saved.');
+      return;
+    }
+
+    const cc = alwaysCC.join(',');
+    let mailto = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}`;
+    if (cc) mailto += `&cc=${encodeURIComponent(cc)}`;
+    mailto += `&body=${encodeURIComponent(body)}`;
+    window.location.href = mailto;
+  };
+
+  // ===== EMAIL ALL AFFECTED DEPTS — single combined email =====
+  window.openEmailAllDepts = function() {
+    if (!safetyReport) { alert('No report loaded.'); return; }
+    const affected = [];
+    Object.keys(safetyReport.departments).forEach(deptName => {
+      const urgent = getDeptUrgent(deptName);
+      if (urgent.hasUrgent) {
+        affected.push({ deptName, urgent, manager: deptManagers[deptName] || '' });
+      }
+    });
+    if (affected.length === 0) { alert('No departments have urgent items. Nice.'); return; }
+
+    const inner = document.getElementById('detailModalInner');
+    inner.innerHTML = `
+      <div class="modal-title">Email All Late Departments</div>
+      <div class="modal-sub">${affected.length} DEPTS · One email, managers in TO, Always-CC included</div>
+      <div style="font-size:12px;color:var(--text-dim);margin-bottom:12px;line-height:1.5;">
+        Confirm or add manager emails below. Only departments with a manager email will be included in the TO line. Departments without one will still show in the body but won't be addressed.
+      </div>
+      <div id="deptQueueList">
+        ${affected.map(a => `
+          <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;">
+              <div style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;letter-spacing:0.08em;">${escapeHTML(a.deptName)}</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-dim);">
+                ${a.urgent.overdue.length ? `<span style="color:var(--red)">${a.urgent.overdue.length} OD</span> ` : ''}
+                ${a.urgent.critical.length ? `<span style="color:var(--orange)">${a.urgent.critical.length} CR</span> ` : ''}
+                ${a.urgent.warning.length ? `<span style="color:var(--yellow)">${a.urgent.warning.length} WN</span>` : ''}
+              </div>
+            </div>
+            <input type="email" class="modal-input" data-dept="${escapeHTML(a.deptName)}" value="${escapeHTML(a.manager)}" placeholder="manager email" style="font-size:13px;padding:8px 10px;" autocapitalize="off" autocorrect="off">
+          </div>
+        `).join('')}
+      </div>
+
+      <div class="modal-label" style="margin-top:14px;">Always-CC ${alwaysCC.length ? `(${alwaysCC.length})` : '(none configured)'}</div>
+      <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);">
+        ${alwaysCC.length ? alwaysCC.map(e => escapeHTML(e)).join('<br>') : 'Add Always-CC emails in Settings.'}
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal()">CANCEL</button>
+        <button class="btn btn-primary" onclick="composeAllDeptsEmail()">COMPOSE EMAIL</button>
+      </div>
+    `;
+    document.getElementById('detailModal').classList.add('active');
+  };
+
+  window.composeAllDeptsEmail = function() {
+    // Save manager emails entered
+    document.querySelectorAll('#deptQueueList input[data-dept]').forEach(inp => {
+      const d = inp.dataset.dept;
+      const v = inp.value.trim();
+      if (v) deptManagers[d] = v;
+    });
+    saveDeptManagers();
+
+    // Build TO list from depts that have urgent items AND a manager email
+    const toEmails = [];
+    const sections = [];
+    Object.keys(safetyReport.departments).forEach(deptName => {
+      const urgent = getDeptUrgent(deptName);
+      if (!urgent.hasUrgent) return;
+      const mgr = deptManagers[deptName];
+      if (mgr && !toEmails.includes(mgr)) toEmails.push(mgr);
+      sections.push({ deptName, urgent, manager: mgr || '(no manager email set)' });
+    });
+
+    if (sections.length === 0) { alert('No affected departments found.'); return; }
+
+    const reportDate = safetyReport.createdDate || 'latest';
+    const subject = `Required Training Update — ${sections.length} Department${sections.length === 1 ? '' : 's'} (${reportDate})`;
+
+    let body = `Hi all,\n\n`;
+    body += `Per the latest Required Training report (${reportDate}), the following departments have items needing attention.\n\n`;
+
+    sections.forEach((s, idx) => {
+      body += `${'═'.repeat(40)}\n`;
+      body += `${s.deptName}  —  Manager: ${s.manager}\n`;
+      body += `${'═'.repeat(40)}\n`;
+
+      if (s.urgent.overdue.length) {
+        body += `\nOVERDUE (${s.urgent.overdue.length}):\n`;
+        const byEmp = {};
+        s.urgent.overdue.forEach(r => { (byEmp[r.name] = byEmp[r.name] || []).push(r); });
+        Object.entries(byEmp).forEach(([name, ts]) => {
+          body += `  ${name}\n`;
+          ts.forEach(t => { body += `    • ${t.activity} — was due ${t.dueDateDisplay} (${Math.abs(t.daysRemaining)}d late)\n`; });
+        });
+      }
+      if (s.urgent.critical.length) {
+        body += `\nCRITICAL — within 30 days (${s.urgent.critical.length}):\n`;
+        const byEmp = {};
+        s.urgent.critical.forEach(r => { (byEmp[r.name] = byEmp[r.name] || []).push(r); });
+        Object.entries(byEmp).forEach(([name, ts]) => {
+          body += `  ${name}\n`;
+          ts.forEach(t => { body += `    • ${t.activity} — due ${t.dueDateDisplay} (${t.daysRemaining}d)\n`; });
+        });
+      }
+      if (s.urgent.warning.length) {
+        body += `\nWARNING — within 60 days (${s.urgent.warning.length}):\n`;
+        const byEmp = {};
+        s.urgent.warning.forEach(r => { (byEmp[r.name] = byEmp[r.name] || []).push(r); });
+        Object.entries(byEmp).forEach(([name, ts]) => {
+          body += `  ${name}\n`;
+          ts.forEach(t => { body += `    • ${t.activity} — due ${t.dueDateDisplay} (${t.daysRemaining}d)\n`; });
+        });
+      }
+      body += `\n`;
+    });
+
+    body += `Please follow up with your teams to get these completed.\n\nThanks`;
+
+    const to = toEmails.join(',');
+    const cc = alwaysCC.join(',');
+    let mailto = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}`;
+    if (cc) mailto += `&cc=${encodeURIComponent(cc)}`;
+    mailto += `&body=${encodeURIComponent(body)}`;
+
+    closeModal();
+    window.location.href = mailto;
+  };
+
   window.showDebugText = function() {
     const txt = window._lastPdfText || localStorage.getItem('workhub_lastPdfText') || '(empty)';
     const logTxt = window._lastPdfLog || localStorage.getItem('workhub_lastPdfLog') || '(no log)';
@@ -1051,6 +1315,10 @@
     const totalUrgent = overdueCount + criticalCount;
     document.getElementById('safetyCount').textContent = totalUrgent > 0 ? `(${totalUrgent})` : '';
     document.getElementById('contactCount').textContent = `Currently ${Object.keys(contacts).length} saved.`;
+    const dmEl = document.getElementById('deptMgrCount');
+    if (dmEl) dmEl.textContent = `Currently ${Object.keys(deptManagers).length} saved.`;
+    const ccEl = document.getElementById('alwaysCCCount');
+    if (ccEl) ccEl.textContent = `Currently ${alwaysCC.length} saved.`;
 
     const priority = [];
     if (safetyReport) {
@@ -1132,6 +1400,7 @@
       let empPreview = empArr.slice(0, 3).map(n => n.split(',')[0]).join(' · ');
       if (empArr.length > 3) empPreview += ` · +${empArr.length - 3} more`;
 
+      const hasManager = !!deptManagers[deptName];
       html += `
         <div class="dept-section">
           <div class="dept-header-collapsible ${shouldExpand ? 'expanded' : ''}" data-dept="${escapeHTML(deptName)}" onclick="toggleDept(this.dataset.dept)">
@@ -1146,6 +1415,7 @@
                 ${counts.warning ? `<span class="dept-stat-warning">${counts.warning} WARN</span>` : ''}
                 ${counts.ok ? `<span class="dept-stat-ok">${counts.ok} OK</span>` : ''}
               </div>
+              <button class="dept-email-btn ${hasManager ? 'has-manager' : ''}" data-dept="${escapeHTML(deptName)}" onclick="event.stopPropagation(); openDeptEmail(this.dataset.dept)" title="Email department manager">✉</button>
               <div class="dept-chevron ${shouldExpand ? 'expanded' : ''}">›</div>
             </div>
           </div>
@@ -1319,6 +1589,120 @@
     viewContacts();
   };
 
+  window.viewDeptManagers = function() {
+    const inner = document.getElementById('contactsModalInner');
+    // Combine saved managers with departments from current report
+    const allDepts = new Set([...Object.keys(deptManagers)]);
+    if (safetyReport) Object.keys(safetyReport.departments).forEach(d => allDepts.add(d));
+    const sorted = [...allDepts].sort();
+    inner.innerHTML = `
+      <div class="modal-title">Department Managers</div>
+      <div class="modal-sub">${Object.keys(deptManagers).length} SAVED · ${sorted.length} VISIBLE</div>
+      ${sorted.length === 0 ? '<div class="empty"><div class="empty-sub">No departments yet. Upload a safety report first.</div></div>' : ''}
+      ${sorted.map(dept => `
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;">
+          <div style="flex:1;min-width:0;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;letter-spacing:0.08em;margin-bottom:4px;">${escapeHTML(dept)}</div>
+            <input type="email" class="modal-input" data-dept="${escapeHTML(dept)}" value="${escapeHTML(deptManagers[dept] || '')}" placeholder="manager email" style="font-size:13px;padding:8px 10px;" autocapitalize="off" autocorrect="off">
+          </div>
+          <button class="delete-btn" data-del="${escapeHTML(dept)}" onclick="deleteDeptManager(this.dataset.del)" style="font-size:22px;flex-shrink:0">×</button>
+        </div>
+      `).join('')}
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeContactsModal()">CLOSE</button>
+        <button class="btn btn-primary" onclick="saveDeptManagersFromModal()">SAVE CHANGES</button>
+      </div>
+    `;
+    document.getElementById('contactsModal').classList.add('active');
+  };
+
+  window.saveDeptManagersFromModal = function() {
+    document.querySelectorAll('#contactsModalInner input[data-dept]').forEach(inp => {
+      const dept = inp.dataset.dept;
+      const val = inp.value.trim();
+      if (val) deptManagers[dept] = val;
+      else delete deptManagers[dept];
+    });
+    saveDeptManagers();
+    closeContactsModal();
+  };
+
+  window.deleteDeptManager = function(dept) {
+    if (!confirm(`Remove manager email for ${dept}?`)) return;
+    delete deptManagers[dept];
+    saveDeptManagers();
+    viewDeptManagers();
+  };
+
+  window.viewAlwaysCC = function() {
+    const inner = document.getElementById('contactsModalInner');
+    inner.innerHTML = `
+      <div class="modal-title">Always-CC Emails</div>
+      <div class="modal-sub">Added to CC on every safety email</div>
+      <div style="font-size:12px;color:var(--text-dim);margin-bottom:14px;line-height:1.5;">
+        These emails get CC'd automatically when you tap a department ✉ button or the EMAIL ALL DEPTS button. Useful for keeping your boss, safety lead, or HR in the loop.
+      </div>
+      <div id="alwaysCCList">
+        ${alwaysCC.map((email, idx) => `
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+            <input type="email" class="modal-input" data-idx="${idx}" value="${escapeHTML(email)}" style="font-size:13px;padding:8px 10px;" autocapitalize="off" autocorrect="off">
+            <button class="delete-btn" data-del-idx="${idx}" onclick="deleteAlwaysCC(parseInt(this.dataset.delIdx))" style="font-size:22px;flex-shrink:0">×</button>
+          </div>
+        `).join('')}
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;">
+        <input type="email" class="modal-input" id="newAlwaysCC" placeholder="add another email" style="font-size:13px;padding:8px 10px;" autocapitalize="off" autocorrect="off">
+        <button class="btn btn-secondary" onclick="addAlwaysCCRow()" style="flex:0 0 60px;padding:9px 10px;">ADD</button>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeContactsModal()">CLOSE</button>
+        <button class="btn btn-primary" onclick="saveAlwaysCCFromModal()">SAVE CHANGES</button>
+      </div>
+    `;
+    document.getElementById('contactsModal').classList.add('active');
+    setTimeout(() => {
+      const inp = document.getElementById('newAlwaysCC');
+      if (inp) inp.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); addAlwaysCCRow(); }
+      });
+    }, 100);
+  };
+
+  window.addAlwaysCCRow = function() {
+    const inp = document.getElementById('newAlwaysCC');
+    const val = inp.value.trim();
+    if (!val) return;
+    // Save existing edits + add new
+    document.querySelectorAll('#alwaysCCList input[data-idx]').forEach(el => {
+      const i = parseInt(el.dataset.idx);
+      alwaysCC[i] = el.value.trim();
+    });
+    alwaysCC.push(val);
+    alwaysCC = alwaysCC.filter(x => x); // drop empties
+    saveAlwaysCC();
+    viewAlwaysCC();
+  };
+
+  window.saveAlwaysCCFromModal = function() {
+    const newList = [];
+    document.querySelectorAll('#alwaysCCList input[data-idx]').forEach(el => {
+      const v = el.value.trim();
+      if (v) newList.push(v);
+    });
+    const pending = document.getElementById('newAlwaysCC');
+    if (pending && pending.value.trim()) newList.push(pending.value.trim());
+    alwaysCC = newList;
+    saveAlwaysCC();
+    closeContactsModal();
+  };
+
+  window.deleteAlwaysCC = function(idx) {
+    if (!confirm(`Remove ${alwaysCC[idx]} from Always-CC?`)) return;
+    alwaysCC.splice(idx, 1);
+    saveAlwaysCC();
+    viewAlwaysCC();
+  };
+
   window.toggleDone = function(id) {
     const item = items.find(i => i.id === id);
     if (item) { item.done = !item.done; saveItems(); }
@@ -1359,7 +1743,7 @@
   };
 
   window.exportData = function() {
-    const data = { version: 2, exported: new Date().toISOString(), items, safetyReport, contacts, walkBookUrl };
+    const data = { version: 3, exported: new Date().toISOString(), items, safetyReport, contacts, deptManagers, alwaysCC, walkBookUrl };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1380,10 +1764,14 @@
         items = data.items || [];
         safetyReport = data.safetyReport || null;
         contacts = data.contacts || {};
+        deptManagers = data.deptManagers || {};
+        alwaysCC = data.alwaysCC || [];
         walkBookUrl = data.walkBookUrl || '';
         localStorage.setItem('workhub_items', JSON.stringify(items));
         localStorage.setItem('workhub_safety', JSON.stringify(safetyReport));
         localStorage.setItem('workhub_contacts', JSON.stringify(contacts));
+        localStorage.setItem('workhub_deptManagers', JSON.stringify(deptManagers));
+        localStorage.setItem('workhub_alwaysCC', JSON.stringify(alwaysCC));
         localStorage.setItem('workhub_walkbook', walkBookUrl);
         document.getElementById('walkBookUrl').value = walkBookUrl;
         render();
