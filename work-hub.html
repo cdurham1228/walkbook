@@ -180,6 +180,13 @@
     justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 6px;
   }
   .dept-name { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; }
+  .dept-code-sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--text-faint);
+    letter-spacing: 0.12em;
+    margin-top: 2px;
+  }
   .dept-stats { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.08em; display: flex; gap: 8px; }
   .dept-stat-overdue { color: var(--red); }
   .dept-stat-critical { color: var(--orange); }
@@ -371,9 +378,9 @@
     <button onclick="viewContacts()">VIEW / EDIT CONTACTS</button>
   </div>
   <div class="settings-row">
-    <h3>Department Manager Emails</h3>
-    <p>One email per department for the ✉ button on the Safety tab. <span id="deptMgrCount"></span></p>
-    <button onclick="viewDeptManagers()">VIEW / EDIT MANAGERS</button>
+    <h3>Department Setup</h3>
+    <p>Display name + manager email for each department, used in the Safety tab and emails. <span id="deptMgrCount"></span></p>
+    <button onclick="viewDeptManagers()">VIEW / EDIT DEPARTMENTS</button>
   </div>
   <div class="settings-row">
     <h3>Always-CC Emails</h3>
@@ -406,8 +413,8 @@
   </div>
   <div class="section-title" style="margin-top:24px;">VERSION</div>
   <div class="settings-row">
-    <h3>Work Hub v3.6</h3>
-    <p>Employee names now render in Unicode bold in safety emails for better scannability.</p>
+    <h3>Work Hub v3.7</h3>
+    <p>Department display names — set custom names like "Meat Department" for USA_061. Shown bold in emails, with code under display name in Safety tab.</p>
   </div>
 </section>
 
@@ -431,6 +438,7 @@
   let safetyReport = JSON.parse(localStorage.getItem('workhub_safety') || 'null');
   let contacts = JSON.parse(localStorage.getItem('workhub_contacts') || '{}');
   let deptManagers = JSON.parse(localStorage.getItem('workhub_deptManagers') || '{}');
+  let deptNames = JSON.parse(localStorage.getItem('workhub_deptNames') || '{}');
   let alwaysCC = JSON.parse(localStorage.getItem('workhub_alwaysCC') || '[]');
   let walkBookUrl = localStorage.getItem('workhub_walkbook') || '';
   let captureType = 'task';
@@ -444,6 +452,8 @@
   function saveSafety() { localStorage.setItem('workhub_safety', JSON.stringify(safetyReport)); render(); }
   function saveContacts() { localStorage.setItem('workhub_contacts', JSON.stringify(contacts)); render(); }
   function saveDeptManagers() { localStorage.setItem('workhub_deptManagers', JSON.stringify(deptManagers)); render(); }
+  function saveDeptNames() { localStorage.setItem('workhub_deptNames', JSON.stringify(deptNames)); render(); }
+  function getDeptDisplay(code) { return (deptNames[code] && deptNames[code].trim()) || code; }
   function saveAlwaysCC() { localStorage.setItem('workhub_alwaysCC', JSON.stringify(alwaysCC)); render(); }
   function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
   function escapeHTML(s) {
@@ -927,12 +937,18 @@
     const urgent = getDeptUrgent(deptName);
     const managerEmail = deptManagers[deptName] || '';
     const inner = document.getElementById('detailModalInner');
+    const display = getDeptDisplay(deptName);
 
     const totalUrgent = urgent.overdue.length + urgent.critical.length + urgent.warning.length;
 
     inner.innerHTML = `
-      <div class="modal-title">${escapeHTML(deptName)}</div>
-      <div class="modal-sub">${urgent.overdue.length} OVERDUE · ${urgent.critical.length} CRITICAL · ${urgent.warning.length} WARNING</div>
+      <div class="modal-title">${escapeHTML(display)}</div>
+      <div class="modal-sub">${display !== deptName ? escapeHTML(deptName) + ' · ' : ''}${urgent.overdue.length} OVERDUE · ${urgent.critical.length} CRITICAL · ${urgent.warning.length} WARNING</div>
+
+      <div class="modal-field">
+        <label class="modal-label">Display Name (optional)</label>
+        <input type="text" class="modal-input" id="deptDisplayName" value="${escapeHTML(deptNames[deptName] || '')}" placeholder="e.g. Meat Department">
+      </div>
 
       <div class="modal-field">
         <label class="modal-label">Department Manager Email</label>
@@ -941,7 +957,7 @@
 
       <div class="modal-field">
         <label class="modal-label">Subject Line</label>
-        <input type="text" class="modal-input" id="deptEmailSubject" value="Required Training - ${escapeHTML(deptName)} Update Needed">
+        <input type="text" class="modal-input" id="deptEmailSubject" value="Required Training - ${escapeHTML(display)} Update Needed">
       </div>
 
       ${totalUrgent === 0
@@ -951,7 +967,7 @@
 
       <div class="modal-actions">
         <button class="btn btn-secondary" onclick="closeModal()">CANCEL</button>
-        <button class="btn btn-primary" data-dept="${escapeHTML(deptName)}" onclick="sendDeptEmail(this.dataset.dept)">${totalUrgent === 0 ? 'SAVE EMAIL' : 'OPEN MAIL'}</button>
+        <button class="btn btn-primary" data-dept="${escapeHTML(deptName)}" onclick="sendDeptEmail(this.dataset.dept)">${totalUrgent === 0 ? 'SAVE' : 'OPEN MAIL'}</button>
       </div>
     `;
     document.getElementById('detailModal').classList.add('active');
@@ -962,15 +978,24 @@
     const subject = document.getElementById('deptEmailSubject').value.trim();
     const bodyField = document.getElementById('deptEmailBody');
     const body = bodyField ? bodyField.value : '';
+    const displayField = document.getElementById('deptDisplayName');
+    const display = displayField ? displayField.value.trim() : '';
 
     if (email) {
       deptManagers[deptName] = email;
       saveDeptManagers();
     }
+    if (display) {
+      deptNames[deptName] = display;
+      saveDeptNames();
+    } else if (displayField && deptNames[deptName]) {
+      delete deptNames[deptName];
+      saveDeptNames();
+    }
 
     if (!body) {
       closeModal();
-      alert('Email address saved.');
+      alert('Saved.');
       return;
     }
 
@@ -1003,7 +1028,7 @@
       <div id="deptQueueList">
         ${affected.map(a => `
           <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;">
               <div style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;letter-spacing:0.08em;">${escapeHTML(a.deptName)}</div>
               <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-dim);">
                 ${a.urgent.overdue.length ? `<span style="color:var(--red)">${a.urgent.overdue.length} OD</span> ` : ''}
@@ -1011,6 +1036,7 @@
                 ${a.urgent.warning.length ? `<span style="color:var(--yellow)">${a.urgent.warning.length} WN</span>` : ''}
               </div>
             </div>
+            <input type="text" class="modal-input" data-dept-name="${escapeHTML(a.deptName)}" value="${escapeHTML(deptNames[a.deptName] || '')}" placeholder="Display name (e.g. Meat Department)" style="font-size:13px;padding:8px 10px;margin-bottom:6px;">
             <input type="email" class="modal-input" data-dept="${escapeHTML(a.deptName)}" value="${escapeHTML(a.manager)}" placeholder="manager email" style="font-size:13px;padding:8px 10px;" autocapitalize="off" autocorrect="off">
           </div>
         `).join('')}
@@ -1030,13 +1056,20 @@
   };
 
   window.composeAllDeptsEmail = function() {
-    // Save manager emails entered
+    // Save manager emails and display names entered
     document.querySelectorAll('#deptQueueList input[data-dept]').forEach(inp => {
       const d = inp.dataset.dept;
       const v = inp.value.trim();
       if (v) deptManagers[d] = v;
     });
+    document.querySelectorAll('#deptQueueList input[data-dept-name]').forEach(inp => {
+      const d = inp.dataset.deptName;
+      const v = inp.value.trim();
+      if (v) deptNames[d] = v;
+      else delete deptNames[d];
+    });
     saveDeptManagers();
+    saveDeptNames();
 
     // Build TO list from depts that have urgent items AND a manager email
     const toEmails = [];
@@ -1085,9 +1118,14 @@
     };
 
     sections.forEach((s, idx) => {
-      const total = s.urgent.overdue.length + s.urgent.critical.length + s.urgent.warning.length;
-      body += `┃ ${s.deptName}  ·  ${total} item${total === 1 ? '' : 's'}\n`;
-      body += `┃ Manager: ${s.manager}\n`;
+      const displayName = getDeptDisplay(s.deptName);
+      const counts = [];
+      if (s.urgent.overdue.length)  counts.push(`${s.urgent.overdue.length} OVERDUE`);
+      if (s.urgent.critical.length) counts.push(`${s.urgent.critical.length} CRITICAL`);
+      if (s.urgent.warning.length)  counts.push(`${s.urgent.warning.length} WARNING`);
+
+      body += `${toBold(displayName)}\n`;
+      body += `   ${counts.join('  ·  ')}\n`;
       body += `${'─'.repeat(48)}\n\n`;
       body += renderSection('OVERDUE', s.urgent.overdue, true);
       body += renderSection('CRITICAL — within 30 days', s.urgent.critical, false);
@@ -1409,11 +1447,15 @@
       if (empArr.length > 3) empPreview += ` · +${empArr.length - 3} more`;
 
       const hasManager = !!deptManagers[deptName];
+      const display = deptNames[deptName] && deptNames[deptName].trim();
+      const headerTitle = display
+        ? `<div class="dept-name">${escapeHTML(display)}</div><div class="dept-code-sub">${escapeHTML(deptName)}</div>`
+        : `<div class="dept-name">${escapeHTML(deptName)}</div>`;
       html += `
         <div class="dept-section">
           <div class="dept-header-collapsible ${shouldExpand ? 'expanded' : ''}" data-dept="${escapeHTML(deptName)}" onclick="toggleDept(this.dataset.dept)">
             <div class="dept-header-left">
-              <div class="dept-name">${escapeHTML(deptName)}</div>
+              ${headerTitle}
               <div class="dept-employees-line">${empArr.length} EMPL · ${empPreview}</div>
             </div>
             <div class="dept-header-right">
@@ -1599,21 +1641,21 @@
 
   window.viewDeptManagers = function() {
     const inner = document.getElementById('contactsModalInner');
-    // Combine saved managers with departments from current report
-    const allDepts = new Set([...Object.keys(deptManagers)]);
+    const allDepts = new Set([...Object.keys(deptManagers), ...Object.keys(deptNames)]);
     if (safetyReport) Object.keys(safetyReport.departments).forEach(d => allDepts.add(d));
     const sorted = [...allDepts].sort();
     inner.innerHTML = `
-      <div class="modal-title">Department Managers</div>
-      <div class="modal-sub">${Object.keys(deptManagers).length} SAVED · ${sorted.length} VISIBLE</div>
+      <div class="modal-title">Department Setup</div>
+      <div class="modal-sub">${Object.keys(deptManagers).length} MANAGERS · ${Object.keys(deptNames).length} NAMED · ${sorted.length} VISIBLE</div>
       ${sorted.length === 0 ? '<div class="empty"><div class="empty-sub">No departments yet. Upload a safety report first.</div></div>' : ''}
       ${sorted.map(dept => `
-        <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;">
-          <div style="flex:1;min-width:0;">
-            <div style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;letter-spacing:0.08em;margin-bottom:4px;">${escapeHTML(dept)}</div>
-            <input type="email" class="modal-input" data-dept="${escapeHTML(dept)}" value="${escapeHTML(deptManagers[dept] || '')}" placeholder="manager email" style="font-size:13px;padding:8px 10px;" autocapitalize="off" autocorrect="off">
+        <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:10px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;letter-spacing:0.08em;">${escapeHTML(dept)}</div>
+            <button class="delete-btn" data-del="${escapeHTML(dept)}" onclick="deleteDeptManager(this.dataset.del)" style="font-size:22px;flex-shrink:0">×</button>
           </div>
-          <button class="delete-btn" data-del="${escapeHTML(dept)}" onclick="deleteDeptManager(this.dataset.del)" style="font-size:22px;flex-shrink:0">×</button>
+          <input type="text" class="modal-input" data-dept-name="${escapeHTML(dept)}" value="${escapeHTML(deptNames[dept] || '')}" placeholder="Display name (e.g. Meat Department)" style="font-size:13px;padding:8px 10px;margin-bottom:6px;">
+          <input type="email" class="modal-input" data-dept="${escapeHTML(dept)}" value="${escapeHTML(deptManagers[dept] || '')}" placeholder="manager email" style="font-size:13px;padding:8px 10px;" autocapitalize="off" autocorrect="off">
         </div>
       `).join('')}
       <div class="modal-actions">
@@ -1631,14 +1673,23 @@
       if (val) deptManagers[dept] = val;
       else delete deptManagers[dept];
     });
+    document.querySelectorAll('#contactsModalInner input[data-dept-name]').forEach(inp => {
+      const dept = inp.dataset.deptName;
+      const val = inp.value.trim();
+      if (val) deptNames[dept] = val;
+      else delete deptNames[dept];
+    });
     saveDeptManagers();
+    saveDeptNames();
     closeContactsModal();
   };
 
   window.deleteDeptManager = function(dept) {
-    if (!confirm(`Remove manager email for ${dept}?`)) return;
+    if (!confirm(`Clear all info for ${dept}?`)) return;
     delete deptManagers[dept];
+    delete deptNames[dept];
     saveDeptManagers();
+    saveDeptNames();
     viewDeptManagers();
   };
 
@@ -1751,7 +1802,7 @@
   };
 
   window.exportData = function() {
-    const data = { version: 3, exported: new Date().toISOString(), items, safetyReport, contacts, deptManagers, alwaysCC, walkBookUrl };
+    const data = { version: 3, exported: new Date().toISOString(), items, safetyReport, contacts, deptManagers, deptNames, alwaysCC, walkBookUrl };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1773,12 +1824,14 @@
         safetyReport = data.safetyReport || null;
         contacts = data.contacts || {};
         deptManagers = data.deptManagers || {};
+        deptNames = data.deptNames || {};
         alwaysCC = data.alwaysCC || [];
         walkBookUrl = data.walkBookUrl || '';
         localStorage.setItem('workhub_items', JSON.stringify(items));
         localStorage.setItem('workhub_safety', JSON.stringify(safetyReport));
         localStorage.setItem('workhub_contacts', JSON.stringify(contacts));
         localStorage.setItem('workhub_deptManagers', JSON.stringify(deptManagers));
+        localStorage.setItem('workhub_deptNames', JSON.stringify(deptNames));
         localStorage.setItem('workhub_alwaysCC', JSON.stringify(alwaysCC));
         localStorage.setItem('workhub_walkbook', walkBookUrl);
         document.getElementById('walkBookUrl').value = walkBookUrl;
