@@ -335,8 +335,8 @@
   </div>
   <div class="section-title" style="margin-top:24px;">VERSION</div>
   <div class="settings-row">
-    <h3>Work Hub v2.2</h3>
-    <p>Persistent debug text storage. Multi-device sync coming in v3.</p>
+    <h3>Work Hub v2.3</h3>
+    <p>PDF.js v2.16 + disabled worker for iOS Safari compat + full diagnostic logging. Multi-device sync coming in v3.</p>
   </div>
 </section>
 
@@ -353,7 +353,7 @@
   <div class="loading-text" id="loadingText">PARSING PDF...</div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <script>
   let items = JSON.parse(localStorage.getItem('workhub_items') || '[]');
   let safetyReport = JSON.parse(localStorage.getItem('workhub_safety') || 'null');
@@ -362,7 +362,8 @@
   let captureType = 'task';
 
   if (window.pdfjsLib) {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    // iOS Safari: disable worker, use main thread. Slower but actually works.
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
   }
 
   function saveItems() { localStorage.setItem('workhub_items', JSON.stringify(items)); render(); }
@@ -408,69 +409,117 @@
   async function handlePDFUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
+    const log = [];
+    const addLog = (msg) => { log.push(`[${(performance.now()/1000).toFixed(2)}s] ${msg}`); };
     document.getElementById('loading').classList.add('active');
-    document.getElementById('loadingText').textContent = 'PARSING PDF...';
+    document.getElementById('loadingText').textContent = 'STARTING...';
+
     try {
+      addLog(`File: ${file.name}, size=${file.size}, type=${file.type}`);
+      addLog(`pdfjsLib defined: ${!!window.pdfjsLib}`);
+      addLog(`pdfjsLib version: ${pdfjsLib.version || 'unknown'}`);
+
+      document.getElementById('loadingText').textContent = 'READING FILE...';
       const arrayBuffer = await file.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      addLog(`ArrayBuffer ready, bytes=${arrayBuffer.byteLength}`);
+
+      document.getElementById('loadingText').textContent = 'LOADING PDF...';
+      // Try with worker disabled — most reliable on iOS Safari
+      const loadingTask = pdfjsLib.getDocument({
+        data: arrayBuffer,
+        disableWorker: true,
+        isEvalSupported: false,
+        useSystemFonts: true
+      });
+      const pdf = await loadingTask.promise;
+      addLog(`PDF loaded: ${pdf.numPages} pages`);
+
       let fullText = '';
+      let totalItems = 0;
       let createdDate = null;
       let location = null;
 
-      // Extract ALL text from ALL pages as one flat stream
       for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
         document.getElementById('loadingText').textContent = `PAGE ${pageNum}/${pdf.numPages}...`;
         const page = await pdf.getPage(pageNum);
         const content = await page.getTextContent();
+        addLog(`Page ${pageNum}: ${content.items.length} text items`);
+        totalItems += content.items.length;
+        // Log a sample of items from first page so we can see structure
+        if (pageNum === 1 && content.items.length > 0) {
+          const sample = content.items.slice(0, 10).map(it => `"${it.str}"`).join(' ');
+          addLog(`Page 1 sample: ${sample}`);
+        }
         const pageText = content.items.map(it => it.str).join(' ');
         fullText += pageText + ' ';
       }
 
       fullText = fullText.replace(/\s+/g, ' ').trim();
+      addLog(`Total text items: ${totalItems}, fullText chars: ${fullText.length}`);
+
+      // Save raw text AND log for debugging
       window._lastPdfText = fullText;
-      try { localStorage.setItem('workhub_lastPdfText', fullText); } catch(e) {}
+      window._lastPdfLog = log.join('\n');
+      try {
+        localStorage.setItem('workhub_lastPdfText', fullText);
+        localStorage.setItem('workhub_lastPdfLog', log.join('\n'));
+      } catch(e) { addLog(`localStorage save failed: ${e.message}`); }
 
       const cdMatch = fullText.match(/Created Date\s*:\s*([A-Za-z]+\s+\d+,?\s*\d{4})/);
-      if (cdMatch) createdDate = cdMatch[1];
+      if (cdMatch) { createdDate = cdMatch[1]; addLog(`Found created date: ${createdDate}`); }
       const locMatch = fullText.match(/Primary Location\s*:\s*([\d]+\s*-\s*[A-Z][A-Z\s]*?)(?:\s+Department|\s+Employee)/);
-      if (locMatch) location = locMatch[1].trim();
+      if (locMatch) { location = locMatch[1].trim(); addLog(`Found location: ${location}`); }
 
       const parsed = parseFullText(fullText);
+      const totalT = Object.values(parsed).reduce((s, r) => s + r.length, 0);
+      addLog(`Parsed: ${Object.keys(parsed).length} departments, ${totalT} trainings`);
 
       safetyReport = {
         createdDate, location, uploadedAt: Date.now(),
         departments: parsed,
         totalEmployees: countUniqueEmployees(parsed),
-        totalTrainings: countTotalTrainings(parsed)
+        totalTrainings: totalT
       };
       saveSafety();
+      try { localStorage.setItem('workhub_lastPdfLog', log.join('\n')); } catch(e) {}
       document.getElementById('loading').classList.remove('active');
       event.target.value = '';
 
-      const totalT = safetyReport.totalTrainings;
       if (totalT === 0) {
-        alert(`Report imported but 0 trainings were parsed.\n\nTap "DEBUG PDF TEXT" below to see what was extracted, then share it so the parser can be fixed.`);
+        if (fullText.length === 0) {
+          alert(`PDF was loaded but NO TEXT was extracted.\n\nThis usually means the PDF is scanned/image-only (not text).\n\nTap "DEBUG PDF TEXT" for the diagnostic log.`);
+        } else {
+          alert(`Text was extracted (${fullText.length} chars) but no trainings parsed.\n\nTap "DEBUG PDF TEXT" to see the raw text and share it.`);
+        }
       } else {
         alert(`Report imported.\n${safetyReport.totalEmployees} employees · ${totalT} trainings · ${Object.keys(parsed).length} departments`);
       }
     } catch (err) {
+      addLog(`ERROR: ${err.name}: ${err.message}`);
+      addLog(`Stack: ${err.stack || 'no stack'}`);
+      window._lastPdfLog = log.join('\n');
+      try { localStorage.setItem('workhub_lastPdfLog', log.join('\n')); } catch(e) {}
       console.error(err);
       document.getElementById('loading').classList.remove('active');
-      alert('Could not parse PDF: ' + err.message);
+      alert(`PDF parsing failed: ${err.message}\n\nTap "DEBUG PDF TEXT" for the full diagnostic log.`);
     }
   }
 
   window.showDebugText = function() {
-    const txt = window._lastPdfText || localStorage.getItem('workhub_lastPdfText') || 'No PDF has been uploaded yet in this session.';
+    const txt = window._lastPdfText || localStorage.getItem('workhub_lastPdfText') || '(empty)';
+    const logTxt = window._lastPdfLog || localStorage.getItem('workhub_lastPdfLog') || '(no log)';
     window._lastPdfText = txt;
+    window._lastPdfLog = logTxt;
+    const combined = `=== DIAGNOSTIC LOG ===\n${logTxt}\n\n=== EXTRACTED TEXT (${txt.length} chars) ===\n${txt}`;
+    window._lastDebugCombined = combined;
     const inner = document.getElementById('detailModalInner');
     inner.innerHTML = `
-      <div class="modal-title">Raw PDF Text</div>
-      <div class="modal-sub">${txt.length} chars · Copy and share so the parser can be fixed</div>
-      <textarea class="modal-input" style="height:50vh;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.4" readonly>${escapeHTML(txt)}</textarea>
+      <div class="modal-title">PDF Debug</div>
+      <div class="modal-sub">Text: ${txt.length} chars · Log: ${logTxt.split('\n').length} lines</div>
+      <textarea class="modal-input" style="height:55vh;font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.4" readonly>${escapeHTML(combined)}</textarea>
       <div class="modal-actions">
         <button class="btn btn-secondary" onclick="closeModal()">CLOSE</button>
-        <button class="btn btn-primary" onclick="navigator.clipboard.writeText(window._lastPdfText || '').then(()=>alert('Copied'))">COPY</button>
+        <button class="btn btn-primary" onclick="navigator.clipboard.writeText(window._lastDebugCombined || '').then(()=>alert('Copied'))">COPY ALL</button>
       </div>
     `;
     document.getElementById('detailModal').classList.add('active');
