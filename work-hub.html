@@ -271,9 +271,12 @@
 
 <section class="panel" id="panel-safety">
   <div class="safety-toolbar">
-    <button class="safety-btn" onclick="document.getElementById('pdfFile').click()">UPLOAD PDF REPORT</button>
+    <button class="safety-btn" onclick="document.getElementById('csvFile').click()">UPLOAD CSV / EXCEL</button>
+    <button class="safety-btn secondary" onclick="openPasteMode()">PASTE TEXT</button>
+    <button class="safety-btn secondary" onclick="document.getElementById('pdfFile').click()">UPLOAD PDF</button>
     <button class="safety-btn secondary" onclick="exportSafetyCSV()">EXPORT CSV</button>
-    <button class="safety-btn secondary" onclick="showDebugText()">DEBUG PDF TEXT</button>
+    <button class="safety-btn secondary" onclick="showDebugText()">DEBUG</button>
+    <input type="file" id="csvFile" accept=".csv,.xlsx,.xls,.tsv,text/csv" style="display:none" onchange="handleCSVUpload(event)">
     <input type="file" id="pdfFile" accept="application/pdf" style="display:none" onchange="handlePDFUpload(event)">
   </div>
   <div id="reportMeta"></div>
@@ -335,8 +338,8 @@
   </div>
   <div class="section-title" style="margin-top:24px;">VERSION</div>
   <div class="settings-row">
-    <h3>Work Hub v2.3</h3>
-    <p>PDF.js v2.16 + disabled worker for iOS Safari compat + full diagnostic logging. Multi-device sync coming in v3.</p>
+    <h3>Work Hub v3.0</h3>
+    <p>CSV/Excel import (primary), paste text mode, PDF fallback (text-PDFs only). Confirmed: scanned/image PDFs can't be parsed in-browser.</p>
   </div>
 </section>
 
@@ -354,6 +357,7 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
   let items = JSON.parse(localStorage.getItem('workhub_items') || '[]');
   let safetyReport = JSON.parse(localStorage.getItem('workhub_safety') || 'null');
@@ -505,17 +509,256 @@
     }
   }
 
+  // ===== CSV / EXCEL UPLOAD =====
+  async function handleCSVUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    document.getElementById('loading').classList.add('active');
+    document.getElementById('loadingText').textContent = 'PARSING FILE...';
+    try {
+      const ext = file.name.toLowerCase().split('.').pop();
+      let rows;
+
+      if (ext === 'csv' || ext === 'tsv' || file.type === 'text/csv') {
+        const text = await file.text();
+        rows = parseCSVText(text, ext === 'tsv' ? '\t' : ',');
+      } else if (ext === 'xlsx' || ext === 'xls' || ext === 'xlsm') {
+        if (!window.XLSX) throw new Error('Excel library failed to load. Try CSV instead.');
+        const buf = await file.arrayBuffer();
+        const wb = XLSX.read(buf, { type: 'array' });
+        const sheet = wb.Sheets[wb.SheetNames[0]];
+        rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+      } else {
+        throw new Error(`Unsupported file type: .${ext}`);
+      }
+
+      if (!rows || rows.length === 0) throw new Error('File appeared empty.');
+
+      const parsed = parseTabularRows(rows);
+      const totalT = Object.values(parsed).reduce((s, r) => s + r.length, 0);
+
+      if (totalT === 0) {
+        document.getElementById('loading').classList.remove('active');
+        event.target.value = '';
+        // Save the rows for debugging
+        window._lastTabular = JSON.stringify(rows.slice(0, 20), null, 2);
+        try { localStorage.setItem('workhub_lastTabular', window._lastTabular); } catch(e) {}
+        alert(`File loaded (${rows.length} rows) but no trainings parsed.\n\nThe column headers may differ. Tap DEBUG to see what was read so the parser can be adjusted.`);
+        return;
+      }
+
+      safetyReport = {
+        createdDate: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        location: null,
+        uploadedAt: Date.now(),
+        departments: parsed,
+        totalEmployees: countUniqueEmployees(parsed),
+        totalTrainings: totalT,
+        source: ext.toUpperCase()
+      };
+      saveSafety();
+      document.getElementById('loading').classList.remove('active');
+      event.target.value = '';
+      alert(`Report imported from ${ext.toUpperCase()}.\n${safetyReport.totalEmployees} employees · ${totalT} trainings · ${Object.keys(parsed).length} departments`);
+    } catch (err) {
+      console.error(err);
+      document.getElementById('loading').classList.remove('active');
+      event.target.value = '';
+      alert(`Could not parse file: ${err.message}`);
+    }
+  }
+
+  function parseCSVText(text, delim) {
+    // Simple CSV parser: handles quoted fields
+    const rows = [];
+    const lines = text.split(/\r?\n/);
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      const fields = [];
+      let cur = '';
+      let inQuotes = false;
+      for (let i = 0; i < line.length; i++) {
+        const c = line[i];
+        if (c === '"') {
+          if (inQuotes && line[i+1] === '"') { cur += '"'; i++; }
+          else inQuotes = !inQuotes;
+        } else if (c === delim && !inQuotes) {
+          fields.push(cur);
+          cur = '';
+        } else {
+          cur += c;
+        }
+      }
+      fields.push(cur);
+      rows.push(fields.map(f => f.trim()));
+    }
+    return rows;
+  }
+
+  // Maps tabular rows (2D array) into department-grouped trainings
+  function parseTabularRows(rows) {
+    if (rows.length < 2) return {};
+
+    // Find header row — first row containing "Employee" or similar
+    let headerIdx = -1;
+    for (let i = 0; i < Math.min(10, rows.length); i++) {
+      const lower = rows[i].map(c => String(c).toLowerCase()).join('|');
+      if (lower.includes('employee') && (lower.includes('due') || lower.includes('activity') || lower.includes('training'))) {
+        headerIdx = i;
+        break;
+      }
+    }
+    if (headerIdx === -1) headerIdx = 0;
+
+    const headers = rows[headerIdx].map(h => String(h).toLowerCase().trim());
+
+    // Map common column-name variations
+    const colIdx = {};
+    const findCol = (...names) => {
+      for (const n of names) {
+        const i = headers.findIndex(h => h.includes(n));
+        if (i !== -1) return i;
+      }
+      return -1;
+    };
+    colIdx.name = findCol('employee', 'name');
+    colIdx.dept = findCol('department', 'dept');
+    colIdx.hireDate = findCol('hire date', 'hiredate');
+    colIdx.jobClass = findCol('job classification', 'classification', 'class');
+    colIdx.jobTitle = findCol('job title', 'title', 'position');
+    colIdx.reqBy = findCol('req. by', 'req by', 'required by', 'requirement');
+    colIdx.activity = findCol('activity', 'training', 'course');
+    colIdx.dueDate = findCol('due date', 'duedate', 'due');
+    colIdx.daysRem = findCol('days rem', 'days remaining', 'days', 'days_rem');
+
+    if (colIdx.name === -1 || colIdx.activity === -1 || colIdx.dueDate === -1) {
+      return {};
+    }
+
+    const departments = {};
+    const today = new Date(); today.setHours(0,0,0,0);
+
+    for (let i = headerIdx + 1; i < rows.length; i++) {
+      const row = rows[i];
+      if (!row || row.length === 0) continue;
+      const name = String(row[colIdx.name] || '').trim();
+      const activity = String(row[colIdx.activity] || '').trim();
+      const dueRaw = String(row[colIdx.dueDate] || '').trim();
+      if (!name || !activity || !dueRaw) continue;
+
+      // Parse date — try multiple formats
+      let dueDate = new Date(dueRaw);
+      if (isNaN(dueDate.getTime())) {
+        // Try MM/DD/YYYY
+        const m = dueRaw.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+        if (m) {
+          let yr = parseInt(m[3]); if (yr < 100) yr += 2000;
+          dueDate = new Date(yr, parseInt(m[1]) - 1, parseInt(m[2]));
+        }
+      }
+      if (isNaN(dueDate.getTime())) continue;
+
+      // Calculate or read days remaining
+      let daysRem;
+      if (colIdx.daysRem !== -1 && row[colIdx.daysRem] !== '') {
+        daysRem = parseInt(row[colIdx.daysRem]);
+      }
+      if (isNaN(daysRem) || daysRem === undefined) {
+        daysRem = Math.round((dueDate.getTime() - today.getTime()) / 86400000);
+      }
+
+      // Department: column or fall back to "Unassigned"
+      const dept = colIdx.dept !== -1 ? String(row[colIdx.dept] || '').trim() || 'Unassigned' : 'Unassigned';
+
+      // Extract hire year if available
+      let hireYear = '';
+      if (colIdx.hireDate !== -1) {
+        const hd = String(row[colIdx.hireDate] || '');
+        const ym = hd.match(/(\d{4})/);
+        if (ym) hireYear = ym[1];
+      }
+
+      const record = {
+        name,
+        hireYear,
+        jobClass: colIdx.jobClass !== -1 ? String(row[colIdx.jobClass] || '').trim() : '',
+        jobTitle: colIdx.jobTitle !== -1 ? String(row[colIdx.jobTitle] || '').trim() : '',
+        reqBy: colIdx.reqBy !== -1 ? String(row[colIdx.reqBy] || '').trim() : '',
+        activity,
+        dueDate: dueDate.toISOString().slice(0, 10),
+        dueDateDisplay: dueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        daysRemaining: daysRem
+      };
+
+      if (!departments[dept]) departments[dept] = [];
+      departments[dept].push(record);
+    }
+
+    return departments;
+  }
+
+  // ===== PASTE TEXT MODE =====
+  window.openPasteMode = function() {
+    const inner = document.getElementById('detailModalInner');
+    inner.innerHTML = `
+      <div class="modal-title">Paste Report Text</div>
+      <div class="modal-sub">Copy data from Costco University (CSV view, table, email) and paste below</div>
+      <textarea class="modal-input" id="pasteArea" style="height:40vh;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.4" placeholder="Paste tab-separated or comma-separated data here, with column headers in the first row..."></textarea>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal()">CANCEL</button>
+        <button class="btn btn-primary" onclick="processPastedText()">IMPORT</button>
+      </div>
+    `;
+    document.getElementById('detailModal').classList.add('active');
+    setTimeout(() => document.getElementById('pasteArea').focus(), 100);
+  };
+
+  window.processPastedText = function() {
+    const text = document.getElementById('pasteArea').value;
+    if (!text.trim()) { alert('Paste some data first.'); return; }
+    // Detect delimiter
+    const firstLine = text.split(/\r?\n/)[0];
+    const tabs = (firstLine.match(/\t/g) || []).length;
+    const commas = (firstLine.match(/,/g) || []).length;
+    const delim = tabs > commas ? '\t' : ',';
+    const rows = parseCSVText(text, delim);
+    if (rows.length < 2) { alert('Need at least a header row and one data row.'); return; }
+
+    const parsed = parseTabularRows(rows);
+    const totalT = Object.values(parsed).reduce((s, r) => s + r.length, 0);
+
+    if (totalT === 0) {
+      alert(`Got ${rows.length} rows but couldn't identify training data.\n\nMake sure the data includes columns for: Employee name, Activity/Training, Due Date.`);
+      return;
+    }
+
+    safetyReport = {
+      createdDate: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      location: null,
+      uploadedAt: Date.now(),
+      departments: parsed,
+      totalEmployees: countUniqueEmployees(parsed),
+      totalTrainings: totalT,
+      source: 'PASTE'
+    };
+    saveSafety();
+    closeModal();
+    alert(`Imported.\n${safetyReport.totalEmployees} employees · ${totalT} trainings · ${Object.keys(parsed).length} departments`);
+  };
+
   window.showDebugText = function() {
     const txt = window._lastPdfText || localStorage.getItem('workhub_lastPdfText') || '(empty)';
     const logTxt = window._lastPdfLog || localStorage.getItem('workhub_lastPdfLog') || '(no log)';
+    const tabular = window._lastTabular || localStorage.getItem('workhub_lastTabular') || '';
     window._lastPdfText = txt;
     window._lastPdfLog = logTxt;
-    const combined = `=== DIAGNOSTIC LOG ===\n${logTxt}\n\n=== EXTRACTED TEXT (${txt.length} chars) ===\n${txt}`;
+    let combined = `=== DIAGNOSTIC LOG ===\n${logTxt}\n\n=== EXTRACTED PDF TEXT (${txt.length} chars) ===\n${txt}`;
+    if (tabular) combined += `\n\n=== LAST CSV/EXCEL SAMPLE (first 20 rows) ===\n${tabular}`;
     window._lastDebugCombined = combined;
     const inner = document.getElementById('detailModalInner');
     inner.innerHTML = `
-      <div class="modal-title">PDF Debug</div>
-      <div class="modal-sub">Text: ${txt.length} chars · Log: ${logTxt.split('\n').length} lines</div>
+      <div class="modal-title">Debug Info</div>
+      <div class="modal-sub">PDF text: ${txt.length} chars · Tabular: ${tabular ? 'present' : 'none'}</div>
       <textarea class="modal-input" style="height:55vh;font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.4" readonly>${escapeHTML(combined)}</textarea>
       <div class="modal-actions">
         <button class="btn btn-secondary" onclick="closeModal()">CLOSE</button>
