@@ -406,8 +406,8 @@
   </div>
   <div class="section-title" style="margin-top:24px;">VERSION</div>
   <div class="settings-row">
-    <h3>Work Hub v3.5</h3>
-    <p>Cleaner email formatting — box-drawing dividers, status markers, summary header, dept blocks with manager info.</p>
+    <h3>Work Hub v3.6</h3>
+    <p>Employee names now render in Unicode bold in safety emails for better scannability.</p>
   </div>
 </section>
 
@@ -872,6 +872,20 @@
     return { overdue, critical, warning, hasUrgent: overdue.length + critical.length + warning.length > 0 };
   }
 
+  // Convert ASCII letters/digits to Unicode "Mathematical Sans-Serif Bold" — renders as bold in most email clients
+  function toBold(str) {
+    const A = 0x1D5D4, a = 0x1D5EE, zero = 0x1D7EC;
+    let out = '';
+    for (const ch of String(str)) {
+      const c = ch.charCodeAt(0);
+      if (c >= 65 && c <= 90)        out += String.fromCodePoint(A + (c - 65));      // A-Z
+      else if (c >= 97 && c <= 122)  out += String.fromCodePoint(a + (c - 97));      // a-z
+      else if (c >= 48 && c <= 57)   out += String.fromCodePoint(zero + (c - 48));   // 0-9
+      else                            out += ch;                                      // punctuation, spaces
+    }
+    return out;
+  }
+
   function buildDeptEmailBody(deptName, urgent) {
     const reportDate = safetyReport.createdDate || 'latest';
     const total = urgent.overdue.length + urgent.critical.length + urgent.warning.length;
@@ -893,7 +907,7 @@
       let section = `${marker} ${label} (${list.length})\n`;
       section += `${'─'.repeat(40)}\n`;
       Object.entries(byEmp).forEach(([name, trainings]) => {
-        section += `   ${name}\n`;
+        section += `   ${toBold(name)}\n`;
         trainings.forEach(t => { section += formatTraining(t, isOverdue) + '\n'; });
       });
       section += '\n';
@@ -1063,7 +1077,7 @@
       list.forEach(r => { (byEmp[r.name] = byEmp[r.name] || []).push(r); });
       let section = `   ● ${label} (${list.length})\n`;
       Object.entries(byEmp).forEach(([name, trainings]) => {
-        section += `      ${name}\n`;
+        section += `      ${toBold(name)}\n`;
         trainings.forEach(t => { section += `         • ${t.activity}  —  ${t.dueDateDisplay}  ·  ${isOverdue ? Math.abs(t.daysRemaining) + 'd LATE' : 'in ' + t.daysRemaining + 'd'}\n`; });
       });
       section += '\n';
