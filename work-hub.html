@@ -532,8 +532,8 @@
   </div>
   <div class="section-title" style="margin-top:24px;">VERSION</div>
   <div class="settings-row">
-    <h3>Work Hub v3.8</h3>
-    <p>Mail tile on Today dashboard — tap to open iOS Mail inbox. Tap "…" for log of safety emails you've sent through Work Hub.</p>
+    <h3>Work Hub v3.9</h3>
+    <p>URL quick-capture (?capture=text&type=task) — pairs with an iOS Shortcut to turn emails into tasks from the Share Sheet.</p>
   </div>
 </section>
 
@@ -2044,6 +2044,41 @@
   updateDate();
   render();
   setInterval(updateDate, 60000);
+
+  // ===== URL PARAMETER QUICK-CAPTURE =====
+  // Supports: ?capture=text&type=task|meeting|note|safety
+  // Used by iOS Shortcut from Mail Share Sheet
+  (function handleURLParams() {
+    const params = new URLSearchParams(window.location.search);
+    const captureText = params.get('capture');
+    const requestedType = params.get('type');
+    if (!captureText) return;
+
+    const validTypes = ['task', 'meeting', 'note', 'safety'];
+    const t = validTypes.includes(requestedType) ? requestedType : 'task';
+
+    setTimeout(() => {
+      const input = document.getElementById('captureInput');
+      input.value = decodeURIComponent(captureText).slice(0, 300);
+      document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+      const targetChip = document.querySelector(`.chip[data-type="${t}"]`);
+      if (targetChip) {
+        targetChip.classList.add('active');
+        captureType = t;
+      }
+      document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      document.querySelector('.tab[data-panel="today"]').classList.add('active');
+      document.getElementById('panel-today').classList.add('active');
+      window.scrollTo(0, 0);
+      input.focus();
+      input.setSelectionRange(input.value.length, input.value.length);
+
+      if (window.history.replaceState) {
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }, 100);
+  })();
 </script>
 
 </body>
