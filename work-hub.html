@@ -64,6 +64,47 @@
     display: flex; justify-content: space-between; align-items: baseline;
   }
   .section-title .meta { color: var(--accent); }
+
+  .routine-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+  .routine-item.done { opacity: 0.45; }
+  .routine-item.done .routine-title { text-decoration: line-through; }
+  .routine-body { flex: 1; min-width: 0; }
+  .routine-title { font-size: 14px; font-weight: 500; line-height: 1.3; }
+  .routine-meta-row {
+    display: flex;
+    gap: 6px;
+    margin-top: 4px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .routine-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    font-weight: 700;
+  }
+  .routine-tag.daily { color: var(--blue); border-color: var(--blue); }
+  .routine-tag.weekly { color: var(--green); border-color: var(--green); }
+  .routine-tag.monthly { color: var(--yellow); border-color: var(--yellow); }
+  .routine-tag.paused { color: var(--text-faint); }
+  .routine-schedule {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-faint);
+  }
   .item {
     background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
     padding: 14px; margin-bottom: 10px; display: flex; gap: 12px; align-items: flex-start;
@@ -438,10 +479,18 @@
 
   <div class="section-title">PRIORITY <span class="meta" id="priorityMeta"></span></div>
   <div id="todayList"></div>
+
+  <div class="section-title" style="margin-top:18px;">ROUTINES <span class="meta" id="routinesMeta"></span></div>
+  <div id="todayRoutines"></div>
 </section>
 
 <section class="panel" id="panel-tasks">
-  <div class="section-title">OPEN <span class="meta" id="openMeta"></span></div>
+  <div class="section-title">
+    ROUTINES
+    <button onclick="openRoutineEditor()" style="background:var(--accent);color:#000;border:none;border-radius:6px;padding:5px 11px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:0.08em;cursor:pointer;">+ ADD</button>
+  </div>
+  <div id="routinesList"></div>
+  <div class="section-title" style="margin-top:24px;">OPEN <span class="meta" id="openMeta"></span></div>
   <div id="tasksOpen"></div>
   <div class="section-title" style="margin-top: 24px;">COMPLETED</div>
   <div id="tasksDone"></div>
@@ -532,8 +581,8 @@
   </div>
   <div class="section-title" style="margin-top:24px;">VERSION</div>
   <div class="settings-row">
-    <h3>Work Hub v3.9</h3>
-    <p>URL quick-capture (?capture=text&type=task) — pairs with an iOS Shortcut to turn emails into tasks from the Share Sheet.</p>
+    <h3>Work Hub v4.0</h3>
+    <p>Recurring routines! Daily / weekly / monthly. Shown on Today dashboard and managed under Tasks. Auto-resets at midnight.</p>
   </div>
 </section>
 
@@ -560,6 +609,8 @@
   let deptNames = JSON.parse(localStorage.getItem('workhub_deptNames') || '{}');
   let alwaysCC = JSON.parse(localStorage.getItem('workhub_alwaysCC') || '[]');
   let emailLog = JSON.parse(localStorage.getItem('workhub_emailLog') || '[]');
+  let routines = JSON.parse(localStorage.getItem('workhub_routines') || '[]');
+  let routineCompletions = JSON.parse(localStorage.getItem('workhub_routineCompletions') || '{}');
   let walkBookUrl = localStorage.getItem('workhub_walkbook') || '';
   let captureType = 'task';
 
@@ -579,6 +630,40 @@
     emailLog.unshift({ id: uid(), type, to, subject, ts: Date.now() });
     emailLog = emailLog.slice(0, 50); // keep last 50
     localStorage.setItem('workhub_emailLog', JSON.stringify(emailLog));
+  }
+  function saveRoutines() { localStorage.setItem('workhub_routines', JSON.stringify(routines)); render(); }
+  function saveRoutineCompletions() { localStorage.setItem('workhub_routineCompletions', JSON.stringify(routineCompletions)); render(); }
+
+  function dateKey(d) {
+    const yr = d.getFullYear();
+    const mo = String(d.getMonth() + 1).padStart(2, '0');
+    const da = String(d.getDate()).padStart(2, '0');
+    return `${yr}-${mo}-${da}`;
+  }
+
+  function isRoutineDueOn(routine, date) {
+    if (routine.paused) return false;
+    if (routine.type === 'daily') return true;
+    if (routine.type === 'weekly') {
+      return Number(routine.dayOfWeek) === date.getDay();
+    }
+    if (routine.type === 'monthly') {
+      const target = Number(routine.dayOfMonth);
+      const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+      const effective = Math.min(target, lastDay);
+      return date.getDate() === effective;
+    }
+    return false;
+  }
+
+  function isRoutineCompletedToday(routine) {
+    const today = dateKey(new Date());
+    return routineCompletions[routine.id] === today;
+  }
+
+  function getTodaysRoutines() {
+    const today = new Date();
+    return routines.filter(r => isRoutineDueOn(r, today));
   }
   function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
   function escapeHTML(s) {
@@ -1442,6 +1527,160 @@
     return { label: 'OK', cls: 'status-ok' };
   }
 
+  function routineHTML(r, todayMode) {
+    const done = isRoutineCompletedToday(r);
+    const scheduleText = describeSchedule(r);
+    const tagCls = r.paused ? 'paused' : r.type;
+    const tagText = r.paused ? 'PAUSED' : r.type.toUpperCase();
+    return `
+      <div class="routine-item ${done && todayMode ? 'done' : ''}">
+        <div class="checkbox ${done ? 'checked' : ''}" onclick="toggleRoutine('${r.id}')"></div>
+        <div class="routine-body" ${todayMode ? '' : `onclick="editRoutine('${r.id}')"`}>
+          <div class="routine-title">${escapeHTML(r.title)}</div>
+          <div class="routine-meta-row">
+            <span class="routine-tag ${tagCls}">${tagText}</span>
+            <span class="routine-schedule">${escapeHTML(scheduleText)}</span>
+          </div>
+        </div>
+        ${todayMode ? '' : `<button class="delete-btn" onclick="deleteRoutine('${r.id}')">×</button>`}
+      </div>
+    `;
+  }
+
+  function describeSchedule(r) {
+    if (r.type === 'daily') return 'every day';
+    if (r.type === 'weekly') {
+      const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      return `every ${days[Number(r.dayOfWeek)]}`;
+    }
+    if (r.type === 'monthly') {
+      const d = Number(r.dayOfMonth);
+      const suffix = (d === 1 || d === 21 || d === 31) ? 'st' : (d === 2 || d === 22) ? 'nd' : (d === 3 || d === 23) ? 'rd' : 'th';
+      return `monthly on the ${d}${suffix}`;
+    }
+    return '';
+  }
+
+  window.toggleRoutine = function(id) {
+    const r = routines.find(x => x.id === id);
+    if (!r) return;
+    const today = dateKey(new Date());
+    if (routineCompletions[id] === today) {
+      delete routineCompletions[id];
+    } else {
+      routineCompletions[id] = today;
+    }
+    saveRoutineCompletions();
+  };
+
+  window.deleteRoutine = function(id) {
+    const r = routines.find(x => x.id === id);
+    if (!r) return;
+    if (!confirm(`Delete routine "${r.title}"?`)) return;
+    routines = routines.filter(x => x.id !== id);
+    delete routineCompletions[id];
+    saveRoutines();
+    saveRoutineCompletions();
+  };
+
+  window.openRoutineEditor = function(existingId) {
+    const existing = existingId ? routines.find(r => r.id === existingId) : null;
+    const today = new Date();
+    const defaultType = existing ? existing.type : 'daily';
+    const defaultDow = existing && existing.type === 'weekly' ? Number(existing.dayOfWeek) : today.getDay();
+    const defaultDom = existing && existing.type === 'monthly' ? Number(existing.dayOfMonth) : today.getDate();
+    const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+    const inner = document.getElementById('detailModalInner');
+    inner.innerHTML = `
+      <div class="modal-title">${existing ? 'Edit Routine' : 'New Routine'}</div>
+      <div class="modal-sub">${existing ? 'UPDATE OR PAUSE' : 'DAILY · WEEKLY · MONTHLY'}</div>
+
+      <div class="modal-field">
+        <label class="modal-label">Title</label>
+        <input type="text" class="modal-input" id="routineTitle" value="${escapeHTML(existing ? existing.title : '')}" placeholder="e.g. Check overnight emails">
+      </div>
+
+      <div class="modal-field">
+        <label class="modal-label">Frequency</label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="chip routine-type-chip ${defaultType==='daily'?'active':''}" data-type="daily" onclick="selectRoutineType('daily')">DAILY</button>
+          <button class="chip routine-type-chip ${defaultType==='weekly'?'active':''}" data-type="weekly" onclick="selectRoutineType('weekly')">WEEKLY</button>
+          <button class="chip routine-type-chip ${defaultType==='monthly'?'active':''}" data-type="monthly" onclick="selectRoutineType('monthly')">MONTHLY</button>
+        </div>
+      </div>
+
+      <div class="modal-field" id="weeklyOptions" style="display:${defaultType==='weekly'?'block':'none'};">
+        <label class="modal-label">Day of Week</label>
+        <select class="modal-input" id="routineDow">
+          ${days.map((d, i) => `<option value="${i}" ${i === defaultDow ? 'selected' : ''}>${d}</option>`).join('')}
+        </select>
+      </div>
+
+      <div class="modal-field" id="monthlyOptions" style="display:${defaultType==='monthly'?'block':'none'};">
+        <label class="modal-label">Day of Month (1–31; uses last day if month is shorter)</label>
+        <input type="number" class="modal-input" id="routineDom" min="1" max="31" value="${defaultDom}">
+      </div>
+
+      ${existing ? `
+        <div class="modal-field">
+          <label style="display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer;color:var(--text);">
+            <input type="checkbox" id="routinePaused" ${existing.paused ? 'checked' : ''} style="width:18px;height:18px;">
+            <span>Paused (won't appear on Today)</span>
+          </label>
+        </div>
+      ` : ''}
+
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal()">CANCEL</button>
+        <button class="btn btn-primary" onclick="saveRoutineFromEditor(${existingId ? `'${existingId}'` : 'null'})">${existing ? 'SAVE' : 'ADD ROUTINE'}</button>
+      </div>
+    `;
+    document.getElementById('detailModal').classList.add('active');
+    setTimeout(() => {
+      const ti = document.getElementById('routineTitle');
+      if (ti && !existing) ti.focus();
+    }, 100);
+  };
+
+  window.selectRoutineType = function(type) {
+    document.querySelectorAll('.routine-type-chip').forEach(c => c.classList.remove('active'));
+    const target = document.querySelector(`.routine-type-chip[data-type="${type}"]`);
+    if (target) target.classList.add('active');
+    document.getElementById('weeklyOptions').style.display = type === 'weekly' ? 'block' : 'none';
+    document.getElementById('monthlyOptions').style.display = type === 'monthly' ? 'block' : 'none';
+  };
+
+  window.saveRoutineFromEditor = function(existingId) {
+    const title = document.getElementById('routineTitle').value.trim();
+    if (!title) { alert('Title required.'); return; }
+    const activeChip = document.querySelector('.routine-type-chip.active');
+    const type = activeChip ? activeChip.dataset.type : 'daily';
+    const pausedEl = document.getElementById('routinePaused');
+    const paused = pausedEl ? pausedEl.checked : false;
+
+    const data = { title, type, paused };
+    if (type === 'weekly') data.dayOfWeek = parseInt(document.getElementById('routineDow').value);
+    if (type === 'monthly') {
+      const dom = parseInt(document.getElementById('routineDom').value);
+      if (isNaN(dom) || dom < 1 || dom > 31) { alert('Day of month must be 1–31.'); return; }
+      data.dayOfMonth = dom;
+    }
+
+    if (existingId) {
+      const r = routines.find(x => x.id === existingId);
+      if (r) Object.assign(r, data);
+    } else {
+      data.id = uid();
+      data.created = Date.now();
+      routines.push(data);
+    }
+    saveRoutines();
+    closeModal();
+  };
+
+  window.editRoutine = function(id) { openRoutineEditor(id); };
+
   function itemHTML(item) {
     const tagText = item.type.toUpperCase();
     const date = new Date(item.created);
@@ -1525,6 +1764,39 @@
     document.getElementById('todayList').innerHTML = priority.length
       ? priority.map(p => p.type === 'item' ? itemHTML(p.data) : safetyRowHTML(p.data, p.data.dept, true)).join('')
       : '<div class="empty"><div class="empty-title">Clear deck.</div><div class="empty-sub">Capture something or upload a safety report.</div></div>';
+
+    // ROUTINES on Today
+    const todaysRoutines = getTodaysRoutines();
+    const pendingRoutines = todaysRoutines.filter(r => !isRoutineCompletedToday(r));
+    const doneRoutines = todaysRoutines.filter(r => isRoutineCompletedToday(r));
+    const routinesMetaEl = document.getElementById('routinesMeta');
+    if (routinesMetaEl) {
+      if (todaysRoutines.length === 0) {
+        routinesMetaEl.textContent = routines.length === 0 ? 'NONE SET' : 'NOTHING DUE';
+      } else {
+        routinesMetaEl.textContent = `${doneRoutines.length}/${todaysRoutines.length} DONE`;
+      }
+    }
+    const todayRoutinesEl = document.getElementById('todayRoutines');
+    if (todayRoutinesEl) {
+      if (todaysRoutines.length === 0) {
+        todayRoutinesEl.innerHTML = routines.length === 0
+          ? '<div class="empty"><div class="empty-sub">No routines yet. Add some on the Tasks tab.</div></div>'
+          : '<div class="empty"><div class="empty-sub">Nothing due today.</div></div>';
+      } else {
+        todayRoutinesEl.innerHTML = [...pendingRoutines, ...doneRoutines].map(r => routineHTML(r, true)).join('');
+      }
+    }
+
+    // ROUTINES on Tasks tab
+    const routinesListEl = document.getElementById('routinesList');
+    if (routinesListEl) {
+      if (routines.length === 0) {
+        routinesListEl.innerHTML = '<div class="empty"><div class="empty-sub">No routines yet. Tap + ADD to create a daily, weekly, or monthly routine.</div></div>';
+      } else {
+        routinesListEl.innerHTML = routines.map(r => routineHTML(r, false)).join('');
+      }
+    }
 
     const tasksOpen = items.filter(i => i.type === 'task' && !i.done);
     const tasksDone = items.filter(i => i.type === 'task' && i.done).slice(0, 20);
@@ -1996,7 +2268,7 @@
   };
 
   window.exportData = function() {
-    const data = { version: 3, exported: new Date().toISOString(), items, safetyReport, contacts, deptManagers, deptNames, alwaysCC, emailLog, walkBookUrl };
+    const data = { version: 4, exported: new Date().toISOString(), items, safetyReport, contacts, deptManagers, deptNames, alwaysCC, emailLog, routines, routineCompletions, walkBookUrl };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -2021,6 +2293,8 @@
         deptNames = data.deptNames || {};
         alwaysCC = data.alwaysCC || [];
         emailLog = data.emailLog || [];
+        routines = data.routines || [];
+        routineCompletions = data.routineCompletions || {};
         walkBookUrl = data.walkBookUrl || '';
         localStorage.setItem('workhub_items', JSON.stringify(items));
         localStorage.setItem('workhub_safety', JSON.stringify(safetyReport));
@@ -2029,6 +2303,8 @@
         localStorage.setItem('workhub_deptNames', JSON.stringify(deptNames));
         localStorage.setItem('workhub_alwaysCC', JSON.stringify(alwaysCC));
         localStorage.setItem('workhub_emailLog', JSON.stringify(emailLog));
+        localStorage.setItem('workhub_routines', JSON.stringify(routines));
+        localStorage.setItem('workhub_routineCompletions', JSON.stringify(routineCompletions));
         localStorage.setItem('workhub_walkbook', walkBookUrl);
         document.getElementById('walkBookUrl').value = walkBookUrl;
         render();
