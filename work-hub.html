@@ -101,7 +101,47 @@
   }
   .stat-num { font-family: 'JetBrains Mono', monospace; font-size: 24px; font-weight: 700; color: var(--accent); line-height: 1; }
   .stat-num.red { color: var(--red); }
+  .stat-num.orange { color: var(--orange); }
+  .stat-num.yellow { color: var(--yellow); }
   .stat-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.12em; color: var(--text-dim); margin-top: 6px; text-transform: uppercase; }
+
+  .dept-section { margin-top: 18px; }
+  .dept-header-collapsible {
+    padding: 14px 14px;
+    background: var(--surface-2);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s;
+  }
+  .dept-header-collapsible:active { background: #2a2a2a; }
+  .dept-header-collapsible.expanded { border-radius: 8px 8px 0 0; }
+  .dept-header-left { flex: 1; min-width: 0; }
+  .dept-header-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .dept-chevron {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    color: var(--text-dim);
+    transition: transform 0.2s;
+  }
+  .dept-chevron.expanded { transform: rotate(90deg); }
+  .dept-rows-container {
+    display: none;
+    padding: 8px 0 0;
+  }
+  .dept-rows-container.expanded { display: block; }
+  .dept-employees-line {
+    font-size: 11px;
+    color: var(--text-faint);
+    margin-top: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.04em;
+  }
   .link-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .link-card {
     background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
@@ -249,9 +289,14 @@
 
 <section class="panel active" id="panel-today">
   <div class="stats">
+    <div class="stat"><div class="stat-num red" id="statOverdue">0</div><div class="stat-label">Overdue</div></div>
+    <div class="stat"><div class="stat-num orange" id="statCritical">0</div><div class="stat-label">Critical ≤30d</div></div>
+    <div class="stat"><div class="stat-num yellow" id="statWarning">0</div><div class="stat-label">Warning ≤60d</div></div>
+  </div>
+  <div class="stats" style="margin-top:-10px;">
     <div class="stat"><div class="stat-num" id="statOpen">0</div><div class="stat-label">Open Tasks</div></div>
-    <div class="stat"><div class="stat-num red" id="statOverdue">0</div><div class="stat-label">Safety Overdue</div></div>
     <div class="stat"><div class="stat-num" id="statToday">0</div><div class="stat-label">Captured Today</div></div>
+    <div class="stat"><div class="stat-num" id="statDepts">0</div><div class="stat-label">Depts Affected</div></div>
   </div>
   <div class="section-title">PRIORITY <span class="meta" id="priorityMeta"></span></div>
   <div id="todayList"></div>
@@ -338,8 +383,8 @@
   </div>
   <div class="section-title" style="margin-top:24px;">VERSION</div>
   <div class="settings-row">
-    <h3>Work Hub v3.1</h3>
-    <p>Fixed Costco CSV parser (Last Name + First Name columns). 342-row import should now work.</p>
+    <h3>Work Hub v3.2</h3>
+    <p>New thresholds (Critical ≤30d, Warning ≤60d), Today dashboard urgency stats, collapsible departments with state memory.</p>
   </div>
 </section>
 
@@ -955,8 +1000,8 @@
 
   function calcStatus(d) {
     if (d <= 0) return { label: 'OVERDUE', cls: 'status-overdue' };
-    if (d <= 7) return { label: 'CRITICAL', cls: 'status-critical' };
-    if (d <= 30) return { label: 'WARNING', cls: 'status-warning' };
+    if (d <= 30) return { label: 'CRITICAL', cls: 'status-critical' };
+    if (d <= 60) return { label: 'WARNING', cls: 'status-warning' };
     return { label: 'OK', cls: 'status-ok' };
   }
 
@@ -983,17 +1028,28 @@
     const openTasks = items.filter(i => !i.done && i.type === 'task').length;
     const todayStart = new Date(); todayStart.setHours(0,0,0,0);
     const todayCount = items.filter(i => i.created >= todayStart.getTime()).length;
-    let overdueCount = 0;
+    let overdueCount = 0, criticalCount = 0, warningCount = 0;
+    const affectedDepts = new Set();
     if (safetyReport) {
-      Object.values(safetyReport.departments).forEach(rows => {
-        overdueCount += rows.filter(r => r.daysRemaining <= 0).length;
+      Object.entries(safetyReport.departments).forEach(([dept, rows]) => {
+        let deptHasIssue = false;
+        rows.forEach(r => {
+          if (r.daysRemaining <= 0) { overdueCount++; deptHasIssue = true; }
+          else if (r.daysRemaining <= 30) { criticalCount++; deptHasIssue = true; }
+          else if (r.daysRemaining <= 60) { warningCount++; deptHasIssue = true; }
+        });
+        if (deptHasIssue) affectedDepts.add(dept);
       });
     }
     document.getElementById('statOpen').textContent = openTasks;
     document.getElementById('statOverdue').textContent = overdueCount;
+    document.getElementById('statCritical').textContent = criticalCount;
+    document.getElementById('statWarning').textContent = warningCount;
     document.getElementById('statToday').textContent = todayCount;
+    document.getElementById('statDepts').textContent = affectedDepts.size;
     document.getElementById('taskCount').textContent = openTasks > 0 ? `(${openTasks})` : '';
-    document.getElementById('safetyCount').textContent = overdueCount > 0 ? `(${overdueCount})` : '';
+    const totalUrgent = overdueCount + criticalCount;
+    document.getElementById('safetyCount').textContent = totalUrgent > 0 ? `(${totalUrgent})` : '';
     document.getElementById('contactCount').textContent = `Currently ${Object.keys(contacts).length} saved.`;
 
     const priority = [];
@@ -1033,7 +1089,7 @@
     const listDiv = document.getElementById('safetyList');
     if (!safetyReport) {
       metaDiv.innerHTML = '';
-      listDiv.innerHTML = '<div class="empty"><div class="empty-title">No report loaded.</div><div class="empty-sub">Tap UPLOAD PDF REPORT to import.</div></div>';
+      listDiv.innerHTML = '<div class="empty"><div class="empty-title">No report loaded.</div><div class="empty-sub">Tap UPLOAD CSV / EXCEL to import.</div></div>';
       return;
     }
     const ageHours = (Date.now() - safetyReport.uploadedAt) / 3600000;
@@ -1045,31 +1101,91 @@
         <span class="${isStale ? 'stale' : ''}">${ageDisplay}</span>
       </div>
     `;
+
+    // Restore expanded state from localStorage
+    let expandedSet;
+    try { expandedSet = new Set(JSON.parse(localStorage.getItem('workhub_expandedDepts') || '[]')); }
+    catch(e) { expandedSet = new Set(); }
+
     let html = '';
-    for (const [deptName, rows] of Object.entries(safetyReport.departments)) {
+    const deptEntries = Object.entries(safetyReport.departments);
+
+    for (const [deptName, rows] of deptEntries) {
       const counts = { overdue: 0, critical: 0, warning: 0, ok: 0 };
+      const uniqueEmployees = new Set();
       rows.forEach(r => {
+        uniqueEmployees.add(r.name);
         const s = calcStatus(r.daysRemaining);
         if (s.label === 'OVERDUE') counts.overdue++;
         else if (s.label === 'CRITICAL') counts.critical++;
         else if (s.label === 'WARNING') counts.warning++;
         else counts.ok++;
       });
+
+      // Auto-expand if dept has overdue items AND user hasn't explicitly collapsed it
+      const userExplicit = localStorage.getItem(`workhub_explicit_${deptName}`);
+      const shouldExpand = expandedSet.has(deptName) || (counts.overdue > 0 && !userExplicit);
+      if (shouldExpand) expandedSet.add(deptName);
+
+      // List of employees (first 3, then "+N more")
+      const empArr = Array.from(uniqueEmployees);
+      let empPreview = empArr.slice(0, 3).map(n => n.split(',')[0]).join(' · ');
+      if (empArr.length > 3) empPreview += ` · +${empArr.length - 3} more`;
+
       html += `
-        <div class="dept-header">
-          <div class="dept-name">${escapeHTML(deptName)}</div>
-          <div class="dept-stats">
-            ${counts.overdue ? `<span class="dept-stat-overdue">${counts.overdue} OVERDUE</span>` : ''}
-            ${counts.critical ? `<span class="dept-stat-critical">${counts.critical} CRIT</span>` : ''}
-            ${counts.warning ? `<span class="dept-stat-warning">${counts.warning} WARN</span>` : ''}
-            ${counts.ok ? `<span class="dept-stat-ok">${counts.ok} OK</span>` : ''}
+        <div class="dept-section">
+          <div class="dept-header-collapsible ${shouldExpand ? 'expanded' : ''}" data-dept="${escapeHTML(deptName)}" onclick="toggleDept(this.dataset.dept)">
+            <div class="dept-header-left">
+              <div class="dept-name">${escapeHTML(deptName)}</div>
+              <div class="dept-employees-line">${empArr.length} EMPL · ${empPreview}</div>
+            </div>
+            <div class="dept-header-right">
+              <div class="dept-stats">
+                ${counts.overdue ? `<span class="dept-stat-overdue">${counts.overdue} OVERDUE</span>` : ''}
+                ${counts.critical ? `<span class="dept-stat-critical">${counts.critical} CRIT</span>` : ''}
+                ${counts.warning ? `<span class="dept-stat-warning">${counts.warning} WARN</span>` : ''}
+                ${counts.ok ? `<span class="dept-stat-ok">${counts.ok} OK</span>` : ''}
+              </div>
+              <div class="dept-chevron ${shouldExpand ? 'expanded' : ''}">›</div>
+            </div>
+          </div>
+          <div class="dept-rows-container ${shouldExpand ? 'expanded' : ''}" id="rows-${escapeHTML(deptName).replace(/[^a-zA-Z0-9_-]/g, '_')}">
+            ${rows.map(r => safetyRowHTML(r, deptName, false)).join('')}
           </div>
         </div>
       `;
-      rows.forEach(r => { html += safetyRowHTML(r, deptName, false); });
     }
+
+    // Save current expanded set
+    try { localStorage.setItem('workhub_expandedDepts', JSON.stringify([...expandedSet])); } catch(e) {}
+
     listDiv.innerHTML = html;
   }
+
+  window.toggleDept = function(deptName) {
+    let set;
+    try { set = new Set(JSON.parse(localStorage.getItem('workhub_expandedDepts') || '[]')); }
+    catch(e) { set = new Set(); }
+    if (set.has(deptName)) {
+      set.delete(deptName);
+      // Mark explicit so auto-expand won't re-open it
+      localStorage.setItem(`workhub_explicit_${deptName}`, 'collapsed');
+    } else {
+      set.add(deptName);
+      localStorage.removeItem(`workhub_explicit_${deptName}`);
+    }
+    try { localStorage.setItem('workhub_expandedDepts', JSON.stringify([...set])); } catch(e) {}
+    // Toggle DOM in place (snappier than full re-render)
+    const header = document.querySelector(`.dept-header-collapsible[data-dept="${CSS.escape(deptName)}"]`);
+    if (header) {
+      const container = header.nextElementSibling;
+      const chevron = header.querySelector('.dept-chevron');
+      const expanded = set.has(deptName);
+      header.classList.toggle('expanded', expanded);
+      container.classList.toggle('expanded', expanded);
+      chevron.classList.toggle('expanded', expanded);
+    }
+  };
 
   function safetyRowHTML(r, dept, showDept) {
     const status = calcStatus(r.daysRemaining);
