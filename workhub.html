@@ -453,7 +453,360 @@
 <!-- ====== WALK BOOK DATA — paste contents of walkbook-data.js here daily ====== -->
 <script>
 // === WALKBOOK DATA START ===
-window.WALKBOOK_DATA = null;
+// ============================================================
+// WALK BOOK DATA — Building 1194 Perrysburg
+// Refresh: May 19, 2026 (Dashboard) · May 20 (PARIS) · May 13 (P9 financial)
+// ============================================================
+// HOW TO USE:
+// 1. Open workhub.html in a text editor
+// 2. Find the lines:    // === WALKBOOK DATA START ===
+//                        window.WALKBOOK_DATA = null;
+//                       // === WALKBOOK DATA END ===
+// 3. Replace `window.WALKBOOK_DATA = null;` with the entire block below
+//    (the `window.WALKBOOK_DATA = { ... };` assignment).
+// 4. Save the file, upload to GitHub, you're done.
+// ============================================================
+
+window.WALKBOOK_DATA = {
+  asOfDashboard: "May 19",
+  asOfParis: "May 20",
+  asOfFinancial: "May 13 (P9)",
+
+  sales: {
+    daily: { ty: 733148,    inc: 0.2156 },
+    wtd:   { ty: 1428259,   inc: 0.1560 },
+    ptd:   { ty: 6620995,   inc: 0.1258 },
+    ytd:   { ty: 177841856, inc: 0.0791 },
+    merch: {
+      daily: { ty: 481725,    inc: 0.0732 },
+      wtd:   { ty: 942622,    inc: 0.0308 },
+      ptd:   { ty: 4661128,   inc: 0.0408 },
+      ytd:   { ty: 135382204, inc: 0.0665 }
+    },
+    gas: {
+      daily: { ty: 141352,   inc: 0.6942 },
+      wtd:   { ty: 271683,   inc: 0.5196 },
+      ptd:   { ty: 1227862,  inc: 0.4591 },
+      ytd:   { ty: 23650941, inc: 0.0898 }
+    },
+    traffic: {
+      daily: { ty: 3508,   inc: 0.0318 },
+      wtd:   { ty: 6951,   inc: 0.0001 },
+      ptd:   { ty: 32814,  inc: 0.0187 },
+      ytd:   { ty: 951097, inc: 0.0231 }
+    },
+    avgSales: {
+      daily: { ty: 186, inc: 0.1307 },
+      wtd:   { ty: 183, inc: 0.1105 },
+      ptd:   { ty: 180, inc: 0.0684 },
+      ytd:   { ty: 174, inc: 0.0630 }
+    }
+  },
+
+  lastWeek: {
+    label: "Mon 5/11 – Sun 5/17",
+    weekly: {
+      totalSales: { plan: 5115536, actual: 5192736, ly: 4645665 },
+      merchSales: { plan: 3856946, actual: 3718506, ly: 3564116 },
+      gasSales:   { plan: 833799,  actual: 956179,  ly: 662731 },
+      ancillary:  { plan: 490050,  actual: 518051,  ly: 418817 },
+      hours:      { schedule: 5907.69, actual: 5533.58, ly: 5809.02 },
+      otHours:    { schedule: 20, actual: 0.40, ly: 0.58 },
+      avgWage:    { schedule: 32.50, actual: 33.58, ly: 31.68 },
+      pctMerch:   { schedule: 0.0498, actual: 0.0500, ly: 0.0516 },
+      pctTotal:   { schedule: 0.0375, actual: 0.0358, ly: 0.0396 }
+    },
+    days: [
+      { dow: "MON", date: "5/11", total: 713384 },
+      { dow: "TUE", date: "5/12", total: 677071 },
+      { dow: "WED", date: "5/13", total: 703782 },
+      { dow: "THU", date: "5/14", total: 708288 },
+      { dow: "FRI", date: "5/15", total: 777464 },
+      { dow: "SAT", date: "5/16", total: 876303 },
+      { dow: "SUN", date: "5/17", total: 736445 }
+    ]
+  },
+
+  lastPeriod: {
+    label: "FY2026 P9 (closed)",
+    sales: {
+      warehouse: { ty: 20621742, ly: 17890311, budget: 19254078, varBudgetPct: 7.10, varLYPct: 15.27 },
+      merch:     { ty: 14816425, ly: 13817401, budget: 14744182, varBudgetPct: 0.49, varLYPct: 7.23 },
+      gas:       { ty: 3776218,  ly: 2543108,  budget: 2662256,  varBudgetPct: 41.84, varLYPct: 48.49 },
+      anc:       { ty: 2284740,  ly: 1779724,  budget: 2092382,  varBudgetPct: 9.19, varLYPct: 28.38 }
+    },
+    margin: {
+      merch:       { ty: 1929467, pct: 13.02, varLY: 12.12 },
+      grossProfit: { ty: 2728392, pct: 13.23, varLY: 15.49 }
+    },
+    members: {
+      total:   { ty: 473071, pct: 2.29, varLY: 4.37 },
+      regular: { ty: 301910, pct: 1.46, varLY: 6.95 },
+      exec:    { ty: 171161, pct: 0.83, varLY: 0.11 }
+    },
+    expenses: {
+      salaries:            { ty: 742822,  pct: 3.60, varLY: 6.52 },
+      benefits:            { ty: 430837,  pct: 2.09, varLY: 7.45 },
+      workersComp:         { ty: 14856,   pct: 0.07, varLY: 6.52 },
+      totalControllables:  { ty: 1295625, pct: 6.28, varLY: 0.77 },
+      totalNonControll:    { ty: 379250,  pct: 1.84, varLY: 3.18 }
+    },
+    profit: {
+      controllable: { ty: 1432767, pct: 6.95, varLY: 33.08 },
+      total:        { ty: 1053517, pct: 5.11, varLY: 48.57 },
+      exGas:        { ty: 692122,  pct: 4.11, varLY: 58.44 },
+      exGasEcom:    { ty: 607096,  pct: 3.60, varLY: 64.66 }
+    }
+  },
+
+  payroll: {
+    pctPlan: 0.0487, pctActual: 0.0486, pctVarPlan: -1, pctVarLY: -4,
+    hoursSchedule: 5784, hoursPlan: 5908, hoursActual: 5686, hoursVarPlan: -221,
+    hoursIncLY: -0.0083, hoursToCut: -7,
+    dollarsSchedule: 191824, dollarsPlan: 192000, dollarsActual: 188996,
+    dollarsVarPlan: -3004, dollarsToCut: -240,
+    otActual: 14.20, otSNE: 0, avgWage: 33.24, productivity: 684
+  },
+
+  membership: {
+    daily: { memberIncome:{ty:4582,inc:-.2962}, goldSignups:{ty:3,inc:-.40}, bizSignups:{ty:0,inc:0}, reactivations:{ty:2,inc:0}, total:{ty:5,inc:0}, newMemberExecPct:{ty:.60,inc:-.25}, execUpgrades:{ty:5,inc:.25}, triplePlay:{ty:0,inc:0}, creditCardApps:{ty:6,inc:0}, newMemberCCPct:{ty:0,inc:0}, nmarPct:{ty:.80,inc:0}, newMemberEmailPct:{ty:1,inc:0} },
+    wtd:   { memberIncome:{ty:9955,inc:-.3098}, goldSignups:{ty:8,inc:-.20}, bizSignups:{ty:0,inc:0}, reactivations:{ty:2,inc:1}, total:{ty:10,inc:-.0909}, newMemberExecPct:{ty:.80,inc:.2571}, execUpgrades:{ty:14,inc:.5556}, triplePlay:{ty:.30,inc:.65}, creditCardApps:{ty:11,inc:.375}, newMemberCCPct:{ty:.30,inc:.65}, nmarPct:{ty:.90,inc:.2375}, newMemberEmailPct:{ty:1,inc:0} },
+    ptd:   { memberIncome:{ty:47866,inc:-.0975}, goldSignups:{ty:63,inc:-.087}, bizSignups:{ty:5,inc:1.5}, reactivations:{ty:8,inc:-.4286}, total:{ty:76,inc:-.1059}, newMemberExecPct:{ty:.7368,inc:.1598}, execUpgrades:{ty:91,inc:.1519}, triplePlay:{ty:.2763,inc:.1184}, creditCardApps:{ty:49,inc:.0208}, newMemberCCPct:{ty:.2895,inc:.0252}, nmarPct:{ty:.9605,inc:.1033}, newMemberEmailPct:{ty:.9868,inc:-.0014} },
+    ytd:   { memberIncome:{ty:4426284,inc:.0533}, goldSignups:{ty:2554,inc:-.1694}, bizSignups:{ty:56,inc:-.1111}, reactivations:{ty:380,inc:-.2762}, total:{ty:2990,inc:-.1837}, newMemberExecPct:{ty:.5538,inc:.0231}, execUpgrades:{ty:3325,inc:.1043}, triplePlay:{ty:.2127,inc:.0002}, creditCardApps:{ty:1465,inc:-.0462}, newMemberCCPct:{ty:.2288,inc:-.0142}, nmarPct:{ty:.8702,inc:-.0688}, newMemberEmailPct:{ty:.9839,inc:-.0024} },
+    ftpt:  { ft:151, ftPct:.5763, pt:102, ptPct:.4237, lpt:9 }
+  },
+
+  departments: [
+    {code:"11",name:"TOBACCO",daily:36,wtd:90,ptd:682,ytd:16414,wtdInc:.21,ptdInc:.377,ytdInc:.074},
+    {code:"12",name:"CANDY",daily:45614,wtd:88495,ptd:441817,ytd:13038193,wtdInc:-.055,ptdInc:.062,ytdInc:.088},
+    {code:"13",name:"FOOD",daily:47829,wtd:95541,ptd:455488,ytd:14399196,wtdInc:-.014,ptdInc:.058,ytdInc:.121},
+    {code:"14",name:"SUNDRIES",daily:81804,wtd:162311,ptd:830347,ytd:21810161,wtdInc:.048,ptdInc:.132,ytdInc:.047},
+    {code:"16",name:"LIQUOR",daily:11301,wtd:20073,ptd:100319,ytd:2577534,wtdInc:-.108,ptdInc:-.042,ytdInc:-.031},
+    {code:"17",name:"COOLER",daily:24993,wtd:51129,ptd:232995,ytd:7004562,wtdInc:.017,ptdInc:-.055,ytdInc:.010},
+    {code:"18",name:"FROZEN FD",daily:28862,wtd:59193,ptd:292540,ytd:8278647,wtdInc:-.01,ptdInc:.025,ytdInc:.042},
+    {code:"19",name:"DELI",daily:22420,wtd:44124,ptd:215184,ytd:6728350,wtdInc:-.017,ptdInc:.021,ytdInc:.049},
+    {code:"20",name:"HABA",daily:27890,wtd:53399,ptd:257783,ytd:7930633,wtdInc:.016,ptdInc:.078,ytdInc:.069},
+    {code:"22",name:"TIRES",daily:6697,wtd:13733,ptd:51209,ytd:1690861,wtdInc:.068,ptdInc:-.123,ytdInc:.110},
+    {code:"23",name:"HARDWARE",daily:11901,wtd:22329,ptd:96988,ytd:2800836,wtdInc:.112,ptdInc:-.029,ytdInc:-.007},
+    {code:"24",name:"MAJORS",daily:12931,wtd:31425,ptd:139569,ytd:5958405,wtdInc:.142,ptdInc:.043,ytdInc:.259},
+    {code:"25",name:"AUTO",daily:1943,wtd:3417,ptd:12725,ytd:442247,wtdInc:.483,ptdInc:-.062,ytdInc:-.188},
+    {code:"26",name:"SPORTS",daily:8590,wtd:18993,ptd:95465,ytd:1273615,wtdInc:.496,ptdInc:.047,ytdInc:-.159},
+    {code:"27",name:"GARDEN",daily:16120,wtd:29616,ptd:197722,ytd:2847528,wtdInc:-.201,ptdInc:.047,ytdInc:.029},
+    {code:"28",name:"TOYS/SEAS",daily:1169,wtd:2772,ptd:19231,ytd:854691,wtdInc:-.228,ptdInc:.273,ytdInc:-.242},
+    {code:"29",name:"STAMPS",daily:855,wtd:1088,ptd:3343,ytd:181747,wtdInc:.069,ptdInc:.044,ytdInc:-.154},
+    {code:"31",name:"W APPAREL",daily:13161,wtd:23215,ptd:100218,ytd:2575088,wtdInc:.289,ptdInc:-.102,ytdInc:-.016},
+    {code:"32",name:"HOUSEWRS",daily:2066,wtd:3831,ptd:22688,ytd:804381,wtdInc:-.38,ptdInc:-.14,ytdInc:-.255},
+    {code:"33",name:"SM APPL",daily:14289,wtd:27824,ptd:115544,ytd:3564815,wtdInc:.667,ptdInc:.196,ytdInc:-.041},
+    {code:"34",name:"DOMESTICS",daily:3789,wtd:7472,ptd:38159,ytd:1345104,wtdInc:-.348,ptdInc:-.286,ytdInc:-.082},
+    {code:"35",name:"JEWELRY",daily:3680,wtd:4010,ptd:15530,ytd:1959022,wtdInc:9.84,ptdInc:-.733,ytdInc:.015},
+    {code:"36",name:"MEDIA",daily:60,wtd:160,ptd:949,ytd:291883,wtdInc:-.641,ptdInc:-.552,ytdInc:.105},
+    {code:"38",name:"HOME FURN",daily:4254,wtd:5466,ptd:17954,ytd:1015907,wtdInc:.018,ptdInc:-.082,ytdInc:-.120},
+    {code:"39",name:"M APPAREL",daily:13061,wtd:23351,ptd:106247,ytd:3228326,wtdInc:.281,ptdInc:.028,ytdInc:.042},
+    {code:"44",name:"SPCL EVNT",daily:451,wtd:761,ptd:38001,ytd:718687,wtdInc:-.189,ptdInc:6.166,ytdInc:.711},
+    {code:"61",name:"MEAT",daily:30563,wtd:58247,ptd:307088,ytd:8814558,wtdInc:.034,ptdInc:.096,ytdInc:.146},
+    {code:"62",name:"BAKERY",daily:7863,wtd:15588,ptd:88739,ytd:2628785,wtdInc:.061,ptdInc:.153,ytdInc:.151},
+    {code:"63",name:"SERV DELI",daily:12508,wtd:25789,ptd:120722,ytd:3600270,wtdInc:.073,ptdInc:.062,ytdInc:.057},
+    {code:"65",name:"PRODUCE",daily:22150,wtd:45813,ptd:230637,ytd:5933097,wtdInc:.017,ptdInc:.043,ytdInc:.072},
+    {code:"53",name:"GASOLINE",daily:141352,wtd:271683,ptd:1227862,ytd:23650941,wtdInc:.520,ptdInc:.459,ytdInc:.090},
+    {code:"88",name:"FOOD CT",daily:5166,wtd:10241,ptd:47048,ytd:1355248,wtdInc:.205,ptdInc:.133,ytdInc:.150},
+    {code:"92",name:"PHARM RX",daily:84148,wtd:154558,ptd:439905,ytd:9862333,wtdInc:1.341,ptdInc:.71,ytdInc:.270},
+    {code:"93",name:"PHARM OTC",daily:14041,wtd:30148,ptd:146245,ytd:4496525,wtdInc:-.067,ptdInc:.002,ytdInc:.037},
+    {code:"94",name:"OPTICAL",daily:5085,wtd:12536,ptd:69482,ytd:2208048,wtdInc:-.395,ptdInc:-.114,ytdInc:.099},
+    {code:"96",name:"HEAR AIDS",daily:1632,wtd:6472,ptd:29325,ytd:886557,wtdInc:-.554,ptdInc:-.227,ytdInc:.011}
+  ],
+
+  categories: {
+    "Food & Sundries": [
+      {n:"Candy (Dept 12)",wtd:88495,wtdI:-.055,ytd:13038193,ytdI:.088,oh:1101},
+      {n:"  Salty Snacks",wtd:24587,wtdI:.097,ytd:2487617,ytdI:.184,oh:139},
+      {n:"  Nuts",wtd:17427,wtdI:-.097,ytd:2052155,ytdI:.097,oh:166},
+      {n:"  Bars",wtd:13700,wtdI:-.013,ytd:1685166,ytdI:.094,oh:34},
+      {n:"  Bulk Candy",wtd:8030,wtdI:-.142,ytd:830250,ytdI:.087,oh:33},
+      {n:"  Cookies & Crackers",wtd:7385,wtdI:-.228,ytd:1110586,ytdI:.074,oh:46},
+      {n:"  Fruit Snacks",wtd:6993,wtdI:-.027,ytd:587762,ytdI:.072,oh:14},
+      {n:"  Meat Snacks",wtd:6953,wtdI:-.052,ytd:886164,ytdI:.094,oh:38},
+      {n:"  Healthy Snacking",wtd:2157,wtdI:.645,ytd:686563,ytdI:.058,oh:171},
+      {n:"  Seasonal Candy",wtd:595,wtdI:-.6234,ytd:448495,ytdI:.165,oh:107},
+      {n:"Food (Dept 13)",wtd:95541,wtdI:-.014,ytd:14399196,ytdI:.120,oh:1227},
+      {n:"  Coffee & Sweeteners",wtd:11472,wtdI:-.119,ytd:1191071,ytdI:.273,oh:80},
+      {n:"  Bread",wtd:10440,wtdI:-.119,ytd:1158016,ytdI:.118,oh:131},
+      {n:"  Oils Mayo Dressing",wtd:9695,wtdI:-.058,ytd:1216216,ytdI:.177,oh:62},
+      {n:"  Fruit & Veg (Dry)",wtd:8606,wtdI:-.137,ytd:1158158,ytdI:.124,oh:34},
+      {n:"  Beverages",wtd:8186,wtdI:-.078,ytd:1075376,ytdI:.221,oh:138},
+      {n:"  Spreads/Syrups/Honey",wtd:6543,wtdI:-.094,ytd:835321,ytdI:.139,oh:48},
+      {n:"  Flour Sugar Baking",wtd:5747,wtdI:-.281,ytd:944437,ytdI:.057,oh:91},
+      {n:"  Cereal",wtd:5775,wtdI:-.099,ytd:593309,ytdI:.107,oh:19},
+      {n:"  Condiments",wtd:4842,wtdI:-.123,ytd:586998,ytdI:.124,oh:18},
+      {n:"  Desserts (Dry)",wtd:4177,wtdI:.116,ytd:475459,ytdI:.179,oh:9},
+      {n:"  Prepared Foods",wtd:3530,wtdI:-.305,ytd:447616,ytdI:.082,oh:13},
+      {n:"  Canned Fish & Meat",wtd:2752,wtdI:-.235,ytd:593800,ytdI:.090,oh:43},
+      {n:"  Rice Beans Pasta",wtd:2658,wtdI:-.212,ytd:411420,ytdI:.151,oh:48},
+      {n:"  Sauces",wtd:1971,wtdI:-.218,ytd:266713,ytdI:.171,oh:13},
+      {n:"  Soups",wtd:1865,wtdI:-.078,ytd:330969,ytdI:.157,oh:8},
+      {n:"  Spices",wtd:1605,wtdI:-.799,ytd:521577,ytdI:.088,oh:21},
+      {n:"Sundries (Dept 14)",wtd:162311,wtdI:.048,ytd:21810161,ytdI:.047,oh:1100},
+      {n:"  Paper Products",wtd:41924,wtdI:.296,ytd:5883031,ytdI:.027,oh:265},
+      {n:"  Pet Supplies",wtd:21851,wtdI:.121,ytd:3248005,ytdI:.058,oh:264},
+      {n:"  Cleaning",wtd:20525,wtdI:-.054,ytd:2840843,ytdI:.073,oh:155},
+      {n:"  Detergent",wtd:7860,wtdI:-.265,ytd:1448260,ytdI:.050,oh:64},
+      {n:"  Hardware (in Sundries)",wtd:6862,wtdI:.034,ytd:1026355,ytdI:.075,oh:42},
+      {n:"  Bags",wtd:5950,wtdI:-.064,ytd:907660,ytdI:.067,oh:31},
+      {n:"  Foam & Catering",wtd:4945,wtdI:-.014,ytd:558946,ytdI:.146,oh:33},
+      {n:"Liquor (Dept 16)",wtd:20073,wtdI:-.108,ytd:2577534,ytdI:-.031,oh:166},
+      {n:"  Beer",wtd:3760,wtdI:-.040,ytd:807062,ytdI:.124,oh:30},
+      {n:"  Vodka",wtd:3460,wtdI:-.117,ytd:537142,ytdI:-.107,oh:32},
+      {n:"  Whisky",wtd:2879,wtdI:-.045,ytd:421257,ytdI:.018,oh:25},
+      {n:"  Fine Wine",wtd:2495,wtdI:-.092,ytd:204945,ytdI:.092,oh:55},
+      {n:"  Sparkling Wine",wtd:1282,wtdI:.320,ytd:115599,ytdI:.005,oh:35},
+      {n:"Cooler (Dept 17)",wtd:51129,wtdI:.017,ytd:7004562,ytdI:.010,oh:494},
+      {n:"  Dairy Products",wtd:28570,wtdI:.320,ytd:3046049,ytdI:.115,oh:445},
+      {n:"  Cooler Meats",wtd:10817,wtdI:-.063,ytd:1167051,ytdI:.057,oh:25},
+      {n:"  Cultured",wtd:6962,wtdI:-.137,ytd:1171121,ytdI:.043,oh:95},
+      {n:"Frozen Food (Dept 18)",wtd:59193,wtdI:-.010,ytd:8278647,ytdI:.042,oh:0},
+      {n:"  Frozen Prepared",wtd:18108,wtdI:-.119,ytd:3038122,ytdI:.099,oh:250},
+      {n:"  Frozen Meat Protein",wtd:13180,wtdI:-.084,ytd:2140585,ytdI:.110,oh:185},
+      {n:"  Frozen Ethnic",wtd:10810,wtdI:.205,ytd:1174063,ytdI:.146,oh:145},
+      {n:"  Frozen Desserts",wtd:7466,wtdI:.020,ytd:865830,ytdI:.094,oh:50},
+      {n:"  Frozen Seafood",wtd:5965,wtdI:-.090,ytd:892557,ytdI:.205,oh:49},
+      {n:"Deli (Dept 19)",wtd:44124,wtdI:-.017,ytd:6728350,ytdI:.049,oh:382},
+      {n:"  Cheese",wtd:34161,wtdI:.000,ytd:4820834,ytdI:.046,oh:301},
+      {n:"  Pasta & Salads",wtd:4485,wtdI:-.130,ytd:486028,ytdI:.046,oh:22},
+      {n:"  Deli Meats",wtd:4162,wtdI:-1.171,ytd:544615,ytdI:.046,oh:51}
+    ],
+    "Hardlines": [
+      {n:"HABA (Dept 20)",wtd:53399,wtdI:.016,ytd:7930633,ytdI:.069,oh:1387},
+      {n:"  Hanging Apparel (HABA)",wtd:23123,wtdI:.289,ytd:2503282,ytdI:.071,oh:228},
+      {n:"  Protein Drinks",wtd:5238,wtdI:-.107,ytd:828012,ytdI:.088,oh:77},
+      {n:"  Feminine Hygiene",wtd:2536,wtdI:-.137,ytd:447045,ytdI:.073,oh:30},
+      {n:"  Hair Care",wtd:2152,wtdI:-.460,ytd:330371,ytdI:.075,oh:18},
+      {n:"  Body Care",wtd:1820,wtdI:-.422,ytd:243280,ytdI:.091,oh:25},
+      {n:"  Skincare",wtd:1750,wtdI:-.464,ytd:319056,ytdI:.102,oh:24},
+      {n:"  Formula",wtd:996,wtdI:-.501,ytd:214157,ytdI:-.099,oh:9},
+      {n:"Tires (Dept 22)",wtd:13733,wtdI:.068,ytd:1690861,ytdI:.110,oh:46},
+      {n:"Hardware (Dept 23)",wtd:22329,wtdI:.112,ytd:2800836,ytdI:-.007,oh:288},
+      {n:"  Power Equipment",wtd:5060,wtdI:-.200,ytd:164836,ytdI:.165,oh:60},
+      {n:"  Batteries",wtd:4030,wtdI:-.245,ytd:791076,ytdI:.080,oh:43},
+      {n:"  Storage",wtd:3708,wtdI:.288,ytd:498438,ytdI:.274,oh:33},
+      {n:"  Lighting & Electrical",wtd:1080,wtdI:-.096,ytd:112520,ytdI:-.434,oh:27},
+      {n:"  Outdoor Wireless",wtd:1071,wtdI:-.197,ytd:166719,ytdI:.252,oh:5},
+      {n:"  Janitorial",wtd:1015,wtdI:-.046,ytd:59387,ytdI:-.082,oh:6},
+      {n:"  Home Safety",wtd:624,wtdI:.519,ytd:65676,ytdI:.207,oh:0},
+      {n:"Majors (Dept 24)",wtd:31425,wtdI:.142,ytd:5958405,ytdI:.259,oh:546},
+      {n:"  TVs",wtd:6907,wtdI:-.107,ytd:1272707,ytdI:-.128,oh:153},
+      {n:"  Apple",wtd:3877,wtdI:.310,ytd:221808,ytdI:.124,oh:2},
+      {n:"  Audio",wtd:3855,wtdI:.770,ytd:319439,ytdI:.901,oh:35},
+      {n:"  Computers",wtd:3540,wtdI:-.380,ytd:0,ytdI:0,oh:920},
+      {n:"  Storage & Networking",wtd:1550,wtdI:.158,ytd:0,ytdI:0,oh:81},
+      {n:"Auto (Dept 25)",wtd:3417,wtdI:.483,ytd:442247,ytdI:-.188,oh:101},
+      {n:"Sports (Dept 26)",wtd:18993,wtdI:.496,ytd:1273615,ytdI:-.154,oh:413},
+      {n:"  Coolers",wtd:9090,wtdI:.917,ytd:51751,ytdI:0,oh:54},
+      {n:"  Spas/Pools",wtd:4647,wtdI:1.058,ytd:84819,ytdI:0,oh:38},
+      {n:"  Camping",wtd:1180,wtdI:1.050,ytd:68656,ytdI:0,oh:34},
+      {n:"  Optics",wtd:710,wtdI:.355,ytd:5808,ytdI:0,oh:0},
+      {n:"  Exercise",wtd:550,wtdI:1.197,ytd:25279,ytdI:.723,oh:11},
+      {n:"Garden (Dept 27)",wtd:29616,wtdI:-.201,ytd:2847528,ytdI:.029,oh:269},
+      {n:"  Live Goods",wtd:8987,wtdI:-.866,ytd:48587,ytdI:0,oh:0},
+      {n:"  Patio Misc",wtd:2526,wtdI:.038,ytd:34556,ytdI:.474,oh:50},
+      {n:"  Chemical",wtd:2225,wtdI:-.327,ytd:266932,ytdI:.082,oh:7283},
+      {n:"  BBQ",wtd:2220,wtdI:-.301,ytd:1006253,ytdI:.161,oh:0},
+      {n:"  Soil & Potting",wtd:1845,wtdI:.066,ytd:793834,ytdI:.475,oh:24},
+      {n:"  Patio",wtd:1500,wtdI:-.914,ytd:139510,ytdI:.082,oh:138},
+      {n:"  Cut Flowers",wtd:1199,wtdI:-.225,ytd:39238,ytdI:.527,oh:0},
+      {n:"  Pest",wtd:1100,wtdI:-.510,ytd:103144,ytdI:0,oh:267},
+      {n:"  Pots",wtd:760,wtdI:-.555,ytd:65276,ytdI:.532,oh:0},
+      {n:"  Power Equipment (G)",wtd:670,wtdI:.067,ytd:50650,ytdI:.436,oh:227},
+      {n:"Toys/Seas (Dept 28)",wtd:2772,wtdI:-.228,ytd:854691,ytdI:-.242,oh:32},
+      {n:"Stamps (Dept 29)",wtd:1088,wtdI:.069,ytd:181747,ytdI:-.154,oh:78}
+    ],
+    "Softlines": [
+      {n:"W Apparel (Dept 31)",wtd:23215,wtdI:.289,ytd:2575088,ytdI:-.016,oh:1769},
+      {n:"  Hanging Apparel (W)",wtd:18816,wtdI:.477,ytd:1912016,ytdI:.071,oh:236},
+      {n:"  Sleeping Needs",wtd:2537,wtdI:-.236,ytd:332158,ytdI:0,oh:230},
+      {n:"  Womens Basics",wtd:1746,wtdI:.061,ytd:106745,ytdI:0,oh:0},
+      {n:"Housewares (Dept 32)",wtd:3831,wtdI:-.380,ytd:804381,ytdI:-.255,oh:88},
+      {n:"  Pantryware",wtd:1440,wtdI:.064,ytd:26221,ytdI:.068,oh:0},
+      {n:"  Water Filtration",wtd:580,wtdI:-.794,ytd:54616,ytdI:.512,oh:14},
+      {n:"  Cookware/Bakeware",wtd:580,wtdI:-.794,ytd:53148,ytdI:.084,oh:0},
+      {n:"Small Appl (Dept 33)",wtd:27824,wtdI:.667,ytd:3564815,ytdI:-.041,oh:332},
+      {n:"  Air",wtd:11816,wtdI:1.094,ytd:78026,ytdI:.139,oh:79},
+      {n:"  Coffee Pods",wtd:7521,wtdI:.139,ytd:160286,ytdI:.345,oh:13},
+      {n:"  Coffee Makers",wtd:3795,wtdI:-.224,ytd:519020,ytdI:.510,oh:13},
+      {n:"  Floor Care",wtd:3795,wtdI:-.224,ytd:156588,ytdI:.600,oh:1},
+      {n:"  Oral Care",wtd:1591,wtdI:.039,ytd:60876,ytdI:0,oh:31},
+      {n:"  Razors",wtd:1564,wtdI:-1,ytd:91934,ytdI:.139,oh:17},
+      {n:"  Garment Care",wtd:280,wtdI:-1,ytd:14460,ytdI:.712,oh:0},
+      {n:"Domestics (Dept 34)",wtd:7472,wtdI:-.348,ytd:1345104,ytdI:-.082,oh:570},
+      {n:"  Sheets",wtd:2133,wtdI:-.193,ytd:153491,ytdI:.582,oh:137},
+      {n:"  Towels",wtd:1138,wtdI:.121,ytd:74013,ytdI:0,oh:26},
+      {n:"  Beach Towels",wtd:970,wtdI:-.840,ytd:428751,ytdI:.009,oh:90},
+      {n:"  Bed Pillows",wtd:814,wtdI:-.420,ytd:201738,ytdI:.500,oh:48},
+      {n:"  Rugs",wtd:436,wtdI:-.840,ytd:158462,ytdI:.009,oh:22},
+      {n:"Jewelry (Dept 35)",wtd:4010,wtdI:9.84,ytd:1959022,ytdI:.015,oh:23},
+      {n:"Media (Dept 36)",wtd:160,wtdI:-.641,ytd:291883,ytdI:.105,oh:69},
+      {n:"Home Furn (Dept 38)",wtd:5466,wtdI:.018,ytd:1015907,ytdI:-.121,oh:343},
+      {n:"  Upholstery",wtd:3680,wtdI:.628,ytd:259604,ytdI:.755,oh:9},
+      {n:"  Mattresses",wtd:750,wtdI:-.521,ytd:236301,ytdI:.114,oh:14},
+      {n:"M Apparel (Dept 39)",wtd:23351,wtdI:.281,ytd:3228326,ytdI:.042,oh:1697},
+      {n:"  Hanging Apparel (M)",wtd:17629,wtdI:.378,ytd:2010019,ytdI:.103,oh:130},
+      {n:"  Childrens Apparel",wtd:3833,wtdI:.187,ytd:415521,ytdI:0,oh:7},
+      {n:"  Mens Basics",wtd:1746,wtdI:.061,ytd:302181,ytdI:0,oh:42},
+      {n:"Spcl Event (Dept 44)",wtd:761,wtdI:-.189,ytd:718687,ytdI:.711,oh:0},
+      {n:"Kiosk (Dept 45)",wtd:1499,wtdI:-.413,ytd:9206,ytdI:0,oh:0}
+    ],
+    "Fresh": [
+      {n:"Meat (Dept 61)",wtd:58247,wtdI:.034,ytd:8814558,ytdI:.146,oh:0},
+      {n:"  Conventional Beef",wtd:11928,wtdI:-.031,ytd:1928716,ytdI:.080,oh:0},
+      {n:"  Conventional Chicken",wtd:7977,wtdI:-.156,ytd:1241365,ytdI:.097,oh:0},
+      {n:"  Pork Program",wtd:6011,wtdI:-.011,ytd:866606,ytdI:0,oh:0},
+      {n:"  Seafood",wtd:5531,wtdI:-.218,ytd:715915,ytdI:0,oh:0},
+      {n:"  Lamb Program",wtd:2726,wtdI:1.740,ytd:177642,ytdI:0,oh:0},
+      {n:"  Fresh Atlantic Salmon",wtd:1998,wtdI:.090,ytd:296681,ytdI:0,oh:0},
+      {n:"  Organic Chicken",wtd:1773,wtdI:.230,ytd:322029,ytdI:.060,oh:0},
+      {n:"  Beef Round Eye Round",wtd:1655,wtdI:.176,ytd:0,ytdI:0,oh:0},
+      {n:"  Conv B/S Breast",wtd:1505,wtdI:-.163,ytd:495491,ytdI:.215,oh:0},
+      {n:"  Conv Turkey",wtd:1300,wtdI:.156,ytd:201165,ytdI:.215,oh:0},
+      {n:"Bakery (Dept 62)",wtd:15588,wtdI:.061,ytd:2628785,ytdI:.151,oh:0},
+      {n:"  Cakes",wtd:3336,wtdI:0,ytd:485849,ytdI:0,oh:0},
+      {n:"  Muffins",wtd:2062,wtdI:0,ytd:435000,ytdI:0,oh:0},
+      {n:"  Cookies",wtd:1995,wtdI:0,ytd:486465,ytdI:0,oh:0},
+      {n:"  Pastries",wtd:1535,wtdI:0,ytd:265000,ytdI:0,oh:0},
+      {n:"  Breads",wtd:1374,wtdI:-.487,ytd:148690,ytdI:0,oh:0},
+      {n:"  Pies",wtd:1095,wtdI:0,ytd:8400,ytdI:0,oh:0},
+      {n:"  Croissants",wtd:623,wtdI:-.107,ytd:153506,ytdI:0,oh:0},
+      {n:"Service Deli (Dept 63)",wtd:25789,wtdI:.073,ytd:3600270,ytdI:.057,oh:0},
+      {n:"  Hot Entree",wtd:8260,wtdI:0,ytd:1146050,ytdI:0,oh:0},
+      {n:"  Rotisserie Chicken",wtd:3953,wtdI:0,ytd:139000,ytdI:0,oh:0},
+      {n:"  Stuffed Bell Peppers",wtd:1440,wtdI:0,ytd:209000,ytdI:0,oh:0},
+      {n:"  Shrimp Cocktail",wtd:1018,wtdI:0,ytd:153000,ytdI:0,oh:0},
+      {n:"  Cold Entree",wtd:1014,wtdI:0,ytd:585990,ytdI:0,oh:0},
+      {n:"Produce (Dept 65)",wtd:45813,wtdI:.017,ytd:5933097,ytdI:.072,oh:52},
+      {n:"  Berries",wtd:9762,wtdI:0,ytd:1311500,ytdI:0,oh:0},
+      {n:"  Blueberries",wtd:8308,wtdI:0,ytd:1301580,ytdI:0,oh:0},
+      {n:"  Hothouse",wtd:4700,wtdI:0,ytd:533570,ytdI:0,oh:0},
+      {n:"  Vegetables",wtd:2880,wtdI:0,ytd:585770,ytdI:0,oh:0},
+      {n:"  Mini Melons",wtd:2624,wtdI:0,ytd:25000,ytdI:0,oh:0},
+      {n:"  Stone Fruit",wtd:2553,wtdI:0,ytd:55000,ytdI:0,oh:0},
+      {n:"  Leafy Greens & Herbs",wtd:2496,wtdI:0,ytd:333355,ytdI:0,oh:0},
+      {n:"  Apples",wtd:2495,wtdI:0,ytd:235445,ytdI:.509,oh:0},
+      {n:"  Grapes",wtd:2060,wtdI:0,ytd:541850,ytdI:0,oh:0},
+      {n:"  Raspberries",wtd:2024,wtdI:0,ytd:285200,ytdI:0,oh:0},
+      {n:"  Potatoes",wtd:1403,wtdI:0,ytd:229316,ytdI:0,oh:0},
+      {n:"  Onions Garlic Ginger",wtd:651,wtdI:0,ytd:127000,ytdI:0,oh:0}
+    ],
+    "Other Bus": [
+      {n:"Gasoline (Dept 53)",wtd:271683,wtdI:.520,ytd:23650941,ytdI:.090,oh:0},
+      {n:"  Regular Gas",wtd:243476,wtdI:.520,ytd:0,ytdI:0,oh:0},
+      {n:"  Premium Gas",wtd:28207,wtdI:.520,ytd:1443000,ytdI:.073,oh:0},
+      {n:"Food Court (Dept 88)",wtd:10241,wtdI:.205,ytd:1355248,ytdI:.150,oh:0},
+      {n:"Pharm Rx (Dept 92)",wtd:154558,wtdI:1.341,ytd:9862333,ytdI:.270,oh:6107},
+      {n:"Pharm OTC (Dept 93)",wtd:30148,wtdI:-.067,ytd:4496525,ytdI:.037,oh:35},
+      {n:"  Vitamins & Supplements",wtd:14350,wtdI:-.078,ytd:0,ytdI:0,oh:0},
+      {n:"Optical (Dept 94)",wtd:12536,wtdI:-.395,ytd:2208048,ytdI:.099,oh:62},
+      {n:"Hearing Aids (Dept 96)",wtd:6472,wtdI:-.554,ytd:886557,ytdI:.011,oh:53}
+    ]
+  }
+};
+
 // === WALKBOOK DATA END ===
 </script>
 
