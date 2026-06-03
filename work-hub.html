@@ -710,8 +710,8 @@
   </div>
   <div class="section-title" style="margin-top:24px;">VERSION</div>
   <div class="settings-row">
-    <h3>Work Hub v4.1</h3>
-    <p>Meetings tab redesigned — multi-line note capture, expandable cards, tap any line to convert it to a task.</p>
+    <h3>Work Hub v4.2</h3>
+    <p>Cleaner Today dashboard — PRIORITY now only shows open tasks. Safety counts stay in the stat tiles at the top.</p>
   </div>
 </section>
 
@@ -2049,24 +2049,14 @@
     }
 
     const priority = [];
-    if (safetyReport) {
-      const allSafety = [];
-      Object.entries(safetyReport.departments).forEach(([dept, rows]) => {
-        rows.forEach(r => allSafety.push({ ...r, dept }));
-      });
-      allSafety.sort((a, b) => a.daysRemaining - b.daysRemaining);
-      allSafety.slice(0, 3).forEach(r => {
-        if (r.daysRemaining <= 30) priority.push({ type: 'safety-row', data: r });
-      });
-    }
     items.filter(i => !i.done && i.type === 'task').slice(0, 5).forEach(t => {
       priority.push({ type: 'item', data: t });
     });
 
     document.getElementById('priorityMeta').textContent = priority.length ? `${priority.length} ITEMS` : 'NOTHING URGENT';
     document.getElementById('todayList').innerHTML = priority.length
-      ? priority.map(p => p.type === 'item' ? itemHTML(p.data) : safetyRowHTML(p.data, p.data.dept, true)).join('')
-      : '<div class="empty"><div class="empty-title">Clear deck.</div><div class="empty-sub">Capture something or upload a safety report.</div></div>';
+      ? priority.map(p => itemHTML(p.data)).join('')
+      : '<div class="empty"><div class="empty-title">Clear deck.</div><div class="empty-sub">Capture something to get started.</div></div>';
 
     // ROUTINES on Today
     const todaysRoutines = getTodaysRoutines();
