@@ -424,8 +424,17 @@
   <div class="settings-row"><h3>Export everything</h3><p>Download a JSON backup.</p><button onclick="exportData()">EXPORT BACKUP</button></div>
   <div class="settings-row"><h3>Import backup</h3><p>Restore from JSON. Replaces current data.</p><button onclick="document.getElementById('importFile').click()">IMPORT FILE</button><input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)"></div>
   <div class="settings-row"><h3>Clear all data</h3><p>Wipes everything stored. Cannot be undone.</p><button onclick="if(confirm('Wipe ALL data?')) { localStorage.clear(); location.reload(); }">CLEAR</button></div>
+  <div class="section-title" style="margin-top:24px;">WALK BOOK DATA</div>
+  <div class="settings-row">
+    <h3>Daily refresh</h3>
+    <p id="wbDataStatus" style="margin-bottom:4px;">—</p>
+    <p id="wbDataTs" style="font-size:11px;color:var(--text-faint);font-family:'JetBrains Mono',monospace;letter-spacing:0.05em;"></p>
+    <button onclick="openWalkBookEditor()">PASTE NEW DATA</button>
+    <button onclick="copyCurrentWalkBookData()" style="margin-left:6px;">COPY CURRENT</button>
+    <button onclick="resetWalkBookData()" style="margin-left:6px;">RESET TO BAKED-IN</button>
+  </div>
   <div class="section-title" style="margin-top:24px;">VERSION</div>
-  <div class="settings-row"><h3>Work Hub v5.0 — Costco Edition</h3><p>Walk Book merged in as a full tab. Today page has Building 1194 quick-glance tiles. Costco red + blue color scheme.</p></div>
+  <div class="settings-row"><h3>Work Hub v5.1 — Paste-in-App Edition</h3><p>Walk Book data can now be updated by pasting the daily block right inside the app (Settings → Walk Book Data). No more editing HTML or GitHub for daily refreshes.</p></div>
 </section>
 
 <button class="fab" onclick="document.getElementById('captureInput').focus()">+</button>
@@ -453,21 +462,9 @@
 <!-- ====== WALK BOOK DATA — paste contents of walkbook-data.js here daily ====== -->
 <script>
 // === WALKBOOK DATA START ===
-// ============================================================
-// WALK BOOK DATA — Building 1194 Perrysburg
-// Refresh: May 19, 2026 (Dashboard) · May 20 (PARIS) · May 13 (P9 financial)
-// ============================================================
-// HOW TO USE:
-// 1. Open workhub.html in a text editor
-// 2. Find the lines:    // === WALKBOOK DATA START ===
-//                        window.WALKBOOK_DATA = null;
-//                       // === WALKBOOK DATA END ===
-// 3. Replace `window.WALKBOOK_DATA = null;` with the entire block below
-//    (the `window.WALKBOOK_DATA = { ... };` assignment).
-// 4. Save the file, upload to GitHub, you're done.
-// ============================================================
-
-window.WALKBOOK_DATA = {
+// Default data is baked in below. Paste-in-app data (saved to localStorage)
+// will override the default if present. Daily refresh = paste in Settings.
+const DEFAULT_WALKBOOK_DATA = {
   asOfDashboard: "May 19",
   asOfParis: "May 20",
   asOfFinancial: "May 13 (P9)",
@@ -807,6 +804,23 @@ window.WALKBOOK_DATA = {
   }
 };
 
+// Check for pasted-in override
+try {
+  const stored = localStorage.getItem('workhub_walkbookData');
+  if (stored) {
+    window.WALKBOOK_DATA = JSON.parse(stored);
+    window.WALKBOOK_DATA_SOURCE = 'pasted';
+    window.WALKBOOK_DATA_TIMESTAMP = localStorage.getItem('workhub_walkbookDataTs') || null;
+  } else {
+    window.WALKBOOK_DATA = DEFAULT_WALKBOOK_DATA;
+    window.WALKBOOK_DATA_SOURCE = 'baked-in';
+    window.WALKBOOK_DATA_TIMESTAMP = null;
+  }
+} catch(e) {
+  window.WALKBOOK_DATA = DEFAULT_WALKBOOK_DATA;
+  window.WALKBOOK_DATA_SOURCE = 'baked-in';
+  window.WALKBOOK_DATA_TIMESTAMP = null;
+}
 // === WALKBOOK DATA END ===
 </script>
 
@@ -1376,6 +1390,23 @@ function render() {
 
   renderBldgTiles();
 
+  // Walk book data status (Settings tab)
+  const wbStatusEl = document.getElementById('wbDataStatus');
+  const wbTsEl = document.getElementById('wbDataTs');
+  if (wbStatusEl) {
+    const src = window.WALKBOOK_DATA_SOURCE || 'baked-in';
+    const D = window.WALKBOOK_DATA;
+    if (D) {
+      wbStatusEl.innerHTML = `Source: <strong>${src.toUpperCase()}</strong> · Dash ${D.asOfDashboard || '?'} · PARIS ${D.asOfParis || '?'} · P&L ${D.asOfFinancial || '?'}`;
+    } else {
+      wbStatusEl.textContent = 'No data loaded.';
+    }
+    if (wbTsEl) {
+      const ts = window.WALKBOOK_DATA_TIMESTAMP;
+      wbTsEl.textContent = ts ? `Last paste: ${new Date(parseInt(ts)).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}` : 'No paste yet (using baked-in default)';
+    }
+  }
+
   const priority = items.filter(i => !i.done && i.type === 'task').slice(0, 5);
   document.getElementById('priorityMeta').textContent = priority.length ? `${priority.length} ITEMS` : 'NOTHING URGENT';
   document.getElementById('todayList').innerHTML = priority.length ? priority.map(itemHTML).join('') : '<div class="empty"><div class="empty-title">Clear deck.</div><div class="empty-sub">Capture something to get started.</div></div>';
@@ -1564,6 +1595,94 @@ window.importData = function(e) {
     } catch (err) { alert('Invalid backup file: ' + err.message); }
   };
   reader.readAsText(file);
+};
+
+// ===== WALK BOOK DATA EDITOR (paste-in-app) =====
+window.openWalkBookEditor = function() {
+  const inner = document.getElementById('detailModalInner');
+  const currentSource = window.WALKBOOK_DATA_SOURCE || 'baked-in';
+  const ts = window.WALKBOOK_DATA_TIMESTAMP;
+  const tsStr = ts ? new Date(parseInt(ts)).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'never';
+  inner.innerHTML = `<div class="modal-title">Paste Walk Book Data</div>
+    <div class="modal-sub">CURRENT: ${currentSource.toUpperCase()} · LAST PASTE: ${tsStr}</div>
+    <div style="font-size:12px;color:var(--text-dim);margin-bottom:12px;line-height:1.5;">
+      Paste the entire <code>window.WALKBOOK_DATA = { ... };</code> block from Claude here. The whole thing — starting with <code>window.WALKBOOK_DATA = {</code> and ending with <code>};</code>. Tap SAVE to update.
+    </div>
+    <textarea class="modal-input" id="wbDataPaste" style="height:50vh;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.4" placeholder="window.WALKBOOK_DATA = { ... };" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">CANCEL</button>
+      <button class="btn btn-primary" onclick="saveWalkBookDataPaste()">SAVE</button>
+    </div>`;
+  document.getElementById('detailModal').classList.add('active');
+  setTimeout(() => document.getElementById('wbDataPaste').focus(), 100);
+};
+
+window.saveWalkBookDataPaste = function() {
+  const raw = document.getElementById('wbDataPaste').value.trim();
+  if (!raw) { alert('Paste the data first.'); return; }
+  // Extract the object literal. Accept either:
+  //   window.WALKBOOK_DATA = { ... };
+  //   { ... }
+  let objText = raw;
+  const m = raw.match(/window\.WALKBOOK_DATA\s*=\s*(\{[\s\S]*\})\s*;?\s*$/);
+  if (m) objText = m[1];
+  // Parse using Function constructor (handles JS object literal syntax with unquoted keys)
+  let parsed;
+  try {
+    parsed = new Function('return (' + objText + ');')();
+  } catch (err) {
+    alert(`Couldn't parse the data. Make sure you pasted the entire block including the outer braces.\n\nError: ${err.message}`);
+    return;
+  }
+  // Sanity check: must have asOfDashboard and sales
+  if (!parsed || typeof parsed !== 'object' || !parsed.sales || !parsed.asOfDashboard) {
+    alert(`Data parsed but doesn't look like walk book data. Missing required fields (asOfDashboard, sales).\n\nMake sure you copied the whole block.`);
+    return;
+  }
+  // Save
+  try {
+    localStorage.setItem('workhub_walkbookData', JSON.stringify(parsed));
+    localStorage.setItem('workhub_walkbookDataTs', String(Date.now()));
+    window.WALKBOOK_DATA = parsed;
+    window.WALKBOOK_DATA_SOURCE = 'pasted';
+    window.WALKBOOK_DATA_TIMESTAMP = String(Date.now());
+    // Clear cached search index
+    delete window._wbSearchIndex;
+    closeModal();
+    render();
+    alert(`Walk book data updated.\nDash ${parsed.asOfDashboard} · PARIS ${parsed.asOfParis || '?'}`);
+  } catch (err) {
+    alert(`Saved to memory but localStorage failed: ${err.message}\nData may be too large for browser storage.`);
+  }
+};
+
+window.copyCurrentWalkBookData = function() {
+  if (!window.WALKBOOK_DATA) { alert('No data loaded.'); return; }
+  const text = 'window.WALKBOOK_DATA = ' + JSON.stringify(window.WALKBOOK_DATA, null, 2) + ';';
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(
+      () => alert(`Copied ${text.length} chars to clipboard.`),
+      () => fallbackCopy(text)
+    );
+  } else {
+    fallbackCopy(text);
+  }
+  function fallbackCopy(t) {
+    const ta = document.createElement('textarea');
+    ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); alert(`Copied ${t.length} chars.`); }
+    catch (e) { alert('Copy failed. Browser blocked clipboard access.'); }
+    document.body.removeChild(ta);
+  }
+};
+
+window.resetWalkBookData = function() {
+  if (!confirm('Reset to baked-in data? Your pasted data will be removed.')) return;
+  localStorage.removeItem('workhub_walkbookData');
+  localStorage.removeItem('workhub_walkbookDataTs');
+  // Reload page to re-evaluate the baked-in default
+  location.reload();
 };
 
 // ============================================================
