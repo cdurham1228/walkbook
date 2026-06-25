@@ -343,6 +343,7 @@
 
   <div class="section-title" style="margin-top:18px;">ROUTINES <span class="meta" id="routinesMeta"></span></div>
   <div id="todayRoutines"></div>
+  <div id="customLinksHome"></div>
 </section>
 
 <section class="panel" id="panel-tasks">
@@ -413,6 +414,7 @@
       <div class="link-sub">→ FILES</div>
     </a>
   </div>
+  <div id="customLinksTab"></div>
 </section>
 
 <section class="panel" id="panel-settings">
@@ -420,6 +422,7 @@
   <div class="settings-row"><h3>Employee Email Lookup</h3><p>Saved emails are remembered for next time. <span id="contactCount"></span></p><button onclick="viewContacts()">VIEW / EDIT CONTACTS</button></div>
   <div class="settings-row"><h3>Department Setup</h3><p>Display name + manager email for each department. <span id="deptMgrCount"></span></p><button onclick="viewDeptManagers()">VIEW / EDIT DEPARTMENTS</button></div>
   <div class="settings-row"><h3>Always-CC Emails</h3><p>Auto-CC'd on safety emails. <span id="alwaysCCCount"></span></p><button onclick="viewAlwaysCC()">VIEW / EDIT ALWAYS-CC</button></div>
+  <div class="settings-row"><h3>Manage Links</h3><p>Google Sheets &amp; other links. Show as a Home tile or in the Links tab. <span id="customLinksCount"></span></p><button onclick="viewCustomLinks()">VIEW / EDIT LINKS</button></div>
   <div class="section-title" style="margin-top:24px;">DATA</div>
   <div class="settings-row"><h3>Export everything</h3><p>Download a JSON backup.</p><button onclick="exportData()">EXPORT BACKUP</button></div>
   <div class="settings-row"><h3>Import backup</h3><p>Restore from JSON. Replaces current data.</p><button onclick="document.getElementById('importFile').click()">IMPORT FILE</button><input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)"></div>
@@ -1572,7 +1575,7 @@ window.exportSafetyCSV = function() {
   URL.revokeObjectURL(url);
 };
 window.exportData = function() {
-  const data = { version: 5, exported: new Date().toISOString(), items, safetyReport, contacts, deptManagers, deptNames, alwaysCC, emailLog, routines, routineCompletions };
+  const data = { version: 5, exported: new Date().toISOString(), items, safetyReport, contacts, deptManagers, deptNames, alwaysCC, emailLog, routines, routineCompletions, customLinks };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a'); a.href = url; a.download = `work-hub-backup-${new Date().toISOString().slice(0,10)}.json`; a.click();
@@ -1590,6 +1593,7 @@ window.importData = function(e) {
       deptNames = data.deptNames || {}; alwaysCC = data.alwaysCC || [];
       emailLog = data.emailLog || []; routines = data.routines || [];
       routineCompletions = data.routineCompletions || {};
+      customLinks = data.customLinks || []; localStorage.setItem('workhub_customLinks', JSON.stringify(customLinks));
       ['workhub_items','workhub_safety','workhub_contacts','workhub_deptManagers','workhub_deptNames','workhub_alwaysCC','workhub_emailLog','workhub_routines','workhub_routineCompletions'].forEach(k => { const v = {items,safety:safetyReport,contacts,deptManagers,deptNames,alwaysCC,emailLog,routines,routineCompletions}[k.replace('workhub_','').replace('safety','safetyReport')]; localStorage.setItem(k, JSON.stringify(v)); });
       render(); alert('Imported.');
     } catch (err) { alert('Invalid backup file: ' + err.message); }
@@ -1851,6 +1855,105 @@ if (wbSearchEl) {
     wbResultsEl.style.display = 'block';
   });
 }
+
+// ===== CUSTOM LINKS MODULE (My Sheets) =====
+let customLinks = [];
+try { customLinks = JSON.parse(localStorage.getItem('workhub_customLinks') || '[]'); }
+catch(e) { customLinks = []; }
+function saveCustomLinks() {
+  localStorage.setItem('workhub_customLinks', JSON.stringify(customLinks));
+  renderCustomLinks();
+}
+function normalizeLinkURL(u) {
+  u = String(u || '').trim();
+  if (!u) return '';
+  if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
+  return u;
+}
+function renderCustomLinks() {
+  const homeWrap = document.getElementById('customLinksHome');
+  if (homeWrap) {
+    const homeLinks = customLinks.filter(l => l.placement === 'home');
+    homeWrap.innerHTML = homeLinks.length === 0 ? '' :
+      '<div class="section-title" style="margin-top:18px;">MY SHEETS</div><div class="link-grid">' +
+      homeLinks.map(l => `<a class="link-card" href="${escapeHTML(normalizeLinkURL(l.url))}" target="_blank" rel="noopener"><div class="link-title">${escapeHTML(l.label)}</div><div class="link-sub">→ OPEN SHEET</div></a>`).join('') +
+      '</div>';
+  }
+  const linksWrap = document.getElementById('customLinksTab');
+  if (linksWrap) {
+    const tabLinks = customLinks.filter(l => l.placement === 'links');
+    linksWrap.innerHTML = tabLinks.length === 0 ? '' :
+      '<div class="section-title" style="margin-top:24px;">MY SHEETS</div><div class="link-grid">' +
+      tabLinks.map(l => `<a class="link-card" href="${escapeHTML(normalizeLinkURL(l.url))}" target="_blank" rel="noopener"><div class="link-title">${escapeHTML(l.label)}</div><div class="link-sub">→ OPEN SHEET</div></a>`).join('') +
+      '</div>';
+  }
+  const cntEl = document.getElementById('customLinksCount');
+  if (cntEl) {
+    const h = customLinks.filter(l => l.placement === 'home').length;
+    const t = customLinks.filter(l => l.placement === 'links').length;
+    cntEl.textContent = `Currently ${customLinks.length} saved (${h} home · ${t} links tab).`;
+  }
+}
+window.viewCustomLinks = function() {
+  const inner = document.getElementById('contactsModalInner');
+  inner.innerHTML =
+    `<div class="modal-title">Manage Links</div><div class="modal-sub">${customLinks.length} SAVED · HOME TILE OR LINKS TAB</div><div id="customLinksList">` +
+    (customLinks.length === 0 ? '<div class="empty"><div class="empty-sub">No links yet. Add one below.</div></div>' : '') +
+    customLinks.map((l, idx) =>
+      `<div style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:10px;"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;"><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:0.06em;color:var(--text-dim);">LINK ${idx + 1}</div><button class="delete-btn" data-del-idx="${idx}" onclick="deleteCustomLink(parseInt(this.dataset.delIdx))" style="font-size:22px;flex-shrink:0">×</button></div><input type="text" class="modal-input" data-cl-label="${idx}" value="${escapeHTML(l.label)}" placeholder="Label (e.g. District Sales Tracker)" style="font-size:13px;padding:8px 10px;margin-bottom:6px;"><input type="text" class="modal-input" data-cl-url="${idx}" value="${escapeHTML(l.url)}" placeholder="https://docs.google.com/..." style="font-size:13px;padding:8px 10px;margin-bottom:8px;" autocapitalize="off" autocorrect="off" spellcheck="false"><div style="display:flex;gap:6px;"><button class="chip cl-place-chip ${l.placement === 'home' ? 'active' : ''}" data-cl-place="${idx}" data-place="home" onclick="setCustomLinkPlacement(${idx},'home')">HOME TILE</button><button class="chip cl-place-chip ${l.placement === 'links' ? 'active' : ''}" data-cl-place="${idx}" data-place="links" onclick="setCustomLinkPlacement(${idx},'links')">LINKS TAB</button></div></div>`
+    ).join('') +
+    `</div><div style="background:var(--surface-2);border:1px dashed var(--border);border-radius:8px;padding:10px 12px;margin-bottom:14px;"><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:0.06em;color:var(--accent);margin-bottom:8px;">+ ADD NEW LINK</div><input type="text" class="modal-input" id="newCLLabel" placeholder="Label" style="font-size:13px;padding:8px 10px;margin-bottom:6px;"><input type="text" class="modal-input" id="newCLUrl" placeholder="https://docs.google.com/..." style="font-size:13px;padding:8px 10px;margin-bottom:8px;" autocapitalize="off" autocorrect="off" spellcheck="false"><div style="display:flex;gap:6px;"><button class="chip cl-new-place active" data-place="links" onclick="setNewCLPlacement('links')">LINKS TAB</button><button class="chip cl-new-place" data-place="home" onclick="setNewCLPlacement('home')">HOME TILE</button><button class="btn btn-secondary" onclick="addCustomLinkRow()" style="flex:0 0 70px;padding:9px 10px;margin-left:auto;">ADD</button></div></div><div class="modal-actions"><button class="btn btn-secondary" onclick="closeContactsModal()">CLOSE</button><button class="btn btn-primary" onclick="saveCustomLinksFromModal()">SAVE CHANGES</button></div>`;
+  document.getElementById('contactsModal').classList.add('active');
+};
+let _newCLPlacement = 'links';
+window.setNewCLPlacement = function(p) {
+  _newCLPlacement = p;
+  document.querySelectorAll('.cl-new-place').forEach(b => b.classList.toggle('active', b.dataset.place === p));
+};
+window.setCustomLinkPlacement = function(idx, p) {
+  document.querySelectorAll(`.cl-place-chip[data-cl-place="${idx}"]`).forEach(b => b.classList.toggle('active', b.dataset.place === p));
+};
+window.addCustomLinkRow = function() {
+  syncCustomLinksFromInputs();
+  const label = (document.getElementById('newCLLabel').value || '').trim();
+  const url = (document.getElementById('newCLUrl').value || '').trim();
+  if (!label || !url) { alert('Add both a label and a URL.'); return; }
+  customLinks.push({ id: uid(), label, url, placement: _newCLPlacement });
+  saveCustomLinks();
+  viewCustomLinks();
+};
+function syncCustomLinksFromInputs() {
+  document.querySelectorAll('#customLinksList [data-cl-label]').forEach(inp => {
+    const i = parseInt(inp.dataset.clLabel);
+    if (customLinks[i]) customLinks[i].label = inp.value.trim();
+  });
+  document.querySelectorAll('#customLinksList [data-cl-url]').forEach(inp => {
+    const i = parseInt(inp.dataset.clUrl);
+    if (customLinks[i]) customLinks[i].url = inp.value.trim();
+  });
+  document.querySelectorAll('#customLinksList .cl-place-chip.active').forEach(chip => {
+    const i = parseInt(chip.dataset.clPlace);
+    if (customLinks[i]) customLinks[i].placement = chip.dataset.place;
+  });
+}
+window.saveCustomLinksFromModal = function() {
+  syncCustomLinksFromInputs();
+  customLinks = customLinks.filter(l => (l.label && l.label.trim()) || (l.url && l.url.trim()));
+  customLinks.forEach(l => { if (!l.placement) l.placement = 'links'; });
+  saveCustomLinks();
+  closeContactsModal();
+};
+window.deleteCustomLink = function(idx) {
+  const l = customLinks[idx];
+  if (!l) return;
+  if (!confirm(`Remove "${l.label || 'this link'}"?`)) return;
+  syncCustomLinksFromInputs();
+  customLinks.splice(idx, 1);
+  saveCustomLinks();
+  viewCustomLinks();
+};
+renderCustomLinks();
+// ===== END CUSTOM LINKS MODULE =====
 
 updateDate();
 render();
