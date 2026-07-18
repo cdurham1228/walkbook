@@ -1,0 +1,41 @@
+{
+  "generatedAt": "2026-07-18T08:00:00Z",
+  "serviceCalls": [
+    { "id": "sc-1001", "title": "Walk-in freezer #2 running warm", "from": "facilities@buildingservices.com", "ts": "2026-07-17T14:32:00Z", "status": "open", "due": "2026-07-19", "note": "Tech dispatched, ETA next-day. Monitor temp log every 2 hrs until resolved." },
+    { "id": "sc-1002", "title": "Forklift #4 hydraulic leak", "from": "fleetmaint@costco.com", "ts": "2026-07-16T09:10:00Z", "status": "open", "due": "2026-07-18", "note": "Taken out of rotation, tagged out in receiving." },
+    { "id": "sc-1003", "title": "Front door sensor replaced", "from": "facilities@buildingservices.com", "ts": "2026-07-14T11:00:00Z", "status": "closed", "due": "2026-07-15", "note": "Completed under warranty, no charge." }
+  ],
+  "events": [
+    { "id": "ev-2001", "title": "Regional VP building walk", "when": "2026-07-21T09:00:00Z", "where": "Front entrance, meet at membership desk", "note": "Confirm safety board and end caps are current before arrival." },
+    { "id": "ev-2002", "title": "Department manager huddle", "when": "2026-07-19T07:15:00Z", "where": "Break room", "note": "Weekly numbers review, bring P9 close notes." },
+    { "id": "ev-2003", "title": "Summer produce vendor demo", "when": "2026-07-22T10:00:00Z", "where": "Produce, front of warehouse", "note": "Vendor bringing sampling table, needs 10x10 floor space." }
+  ],
+  "requests": [
+    { "id": "rq-3001", "for": "Connor", "from": "ap-team@costco.com", "subject": "Approve invoice discrepancy - Sysco #88213", "ask": "Please approve or dispute the $412 overage on the produce delivery invoice before it posts.", "due": "2026-07-19", "emailTs": "2026-07-17T16:45:00Z" },
+    { "id": "rq-3002", "for": "Both", "from": "regional.ops@costco.com", "subject": "Sign off on Q3 safety self-audit", "ask": "Both managers need to countersign the self-audit before it's submitted regionally.", "due": "2026-07-20", "emailTs": "2026-07-17T13:20:00Z" },
+    { "id": "rq-3003", "for": "Dorion", "from": "hr@costco.com", "subject": "Confirm coverage for open Front End shifts", "ask": "Need confirmation on weekend coverage plan by end of week.", "due": "2026-07-18", "emailTs": "2026-07-16T18:05:00Z" }
+  ],
+  "deadlines": [
+    { "id": "dl-4001", "title": "Q3 safety self-audit submission", "due": "2026-07-20", "source": "Regional Ops email" },
+    { "id": "dl-4002", "title": "Forklift certification renewal — J. Alvarez", "due": "2026-07-15", "source": "HR training email" },
+    { "id": "dl-4003", "title": "Fire suppression inspection sign-off", "due": "2026-08-05", "source": "Facilities email" }
+  ],
+  "tasks": [
+    { "id": "tk-5001", "text": "Reply to Sysco re: invoice #88213 discrepancy", "due": "2026-07-19", "source": "AP team email", "done": false },
+    { "id": "tk-5002", "text": "Print updated org chart for department manager huddle", "due": "2026-07-19", "source": "Ops email", "done": false },
+    { "id": "tk-5003", "text": "Follow up with vendor on produce demo floor space request", "due": "2026-07-21", "source": "Vendor email", "done": false }
+  ],
+  "safety": [
+    { "id": "sf-6001", "title": "Spill reported and cleaned, aisle 12", "dept": "Grocery", "detail": "Wet floor sign placed, mopped within 5 minutes of report. No injuries.", "ts": "2026-07-17T15:10:00Z" },
+    { "id": "sf-6002", "title": "Near-miss: pallet jack in main aisle", "dept": "Receiving", "detail": "No contact, reported by member. Reviewed traffic pattern with receiving team.", "ts": "2026-07-16T10:40:00Z" }
+  ],
+  "reviews": [
+    { "id": "rv-7001", "employee": "M. Chen", "type": "90-Day Review", "due": "2026-07-22" },
+    { "id": "rv-7002", "employee": "T. Okafor", "type": "Annual Review", "due": "2026-07-30" }
+  ],
+  "breakAid": [
+    { "id": "ba-8001", "name": "Maria Chen", "dept": "Front End", "shift": "7a-3:30p", "status": "here", "note": "Register 3" },
+    { "id": "ba-8002", "name": "Jamal Alvarez", "dept": "Receiving", "shift": "6a-2:30p", "status": "break", "note": "Back at 1:45p" },
+    { "id": "ba-8003", "name": "Tunde Okafor", "dept": "Deli", "shift": "8a-4:30p", "status": "gone", "note": "Called out sick" }
+  ]
+}
